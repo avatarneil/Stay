@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { createMockStayClient } from "./mockStayClient";
+import type { MockStayClient } from "./mockStayClient";
 import type { StayClient } from "./stayClient";
 import { createTauriStayClient } from "./stayClient";
 import "./styles.css";
@@ -10,6 +11,7 @@ import "./styles.css";
 declare global {
   interface Window {
     __STAY_CLIENT__?: StayClient;
+    __stayMock?: MockStayClient;
     __TAURI__?: unknown;
     __TAURI_INTERNALS__?: unknown;
   }
@@ -36,5 +38,8 @@ function clientFromEnvironment(): StayClient {
     return createTauriStayClient();
   }
 
-  return createMockStayClient();
+  const mockClient = createMockStayClient();
+  window.__STAY_CLIENT__ = mockClient;
+  window.__stayMock = mockClient;
+  return mockClient;
 }

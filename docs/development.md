@@ -56,7 +56,9 @@ npm run frontend:dev
 
 Outside the Tauri runtime, the GUI uses the deterministic mock Stay client. This
 lets agents inspect and test mode transitions in a browser without foreground
-window permissions.
+window permissions. Browser-mode agents can drive states through
+`window.__stayMock.focusMeeting()`, `window.__stayMock.focusAway()`, and the
+same command methods exposed by the typed Stay client.
 
 Production GUI assets are generated with:
 
