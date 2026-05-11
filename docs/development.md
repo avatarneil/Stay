@@ -38,9 +38,13 @@ commands through the Tauri bridge. To run it locally:
 
 ```sh
 cd apps/desktop
-npm install
-npm run dev
+bun install
+bun run dev
 ```
+
+The desktop package is Bun-managed. Use the repository `.bun-version` and the
+committed `apps/desktop/bun.lock` when installing or updating JavaScript
+tooling.
 
 The current window is always-on-top and positioned near the top-right monitor
 edge at startup. This is a friction layer, not an OS-level security boundary.

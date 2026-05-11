@@ -31,10 +31,9 @@ For the desktop shell:
 
 ```sh
 cd apps/desktop
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 See `docs/development.md` and `docs/platform-permissions.md` for the working
 notes that future implementation agents should read first.
-

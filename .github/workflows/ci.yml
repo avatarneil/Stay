@@ -2,12 +2,12 @@ name: CI
 
 on:
   push:
-    branches: ["main", "feat/**", "fix/**"]
+    branches: ["main", "feat/**", "fix/**", "refactor/**"]
   pull_request:
 
 jobs:
   rust:
-    name: Rust checks (${{ matrix.os }})
+    name: Checks (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,6 +16,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Verify desktop package lockfile
+        working-directory: apps/desktop
+        run: bun install --frozen-lockfile
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
