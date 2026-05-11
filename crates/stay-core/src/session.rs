@@ -90,13 +90,37 @@ pub enum GuardError {
 enum GuardPhase {
     Idle,
     Candidate(MeetingCandidate),
-    Guarding(MeetingCandidate),
+    Guarding(GuardSession),
     Locked {
-        meeting: MeetingCandidate,
+        session: GuardSession,
         focused: WindowSnapshot,
         failed_attempts: u32,
         last_error: Option<String>,
     },
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+struct GuardSession {
+    meeting: MeetingCandidate,
+    authorized_app_keys: HashSet<String>,
+}
+
+impl GuardSession {
+    fn new(meeting: MeetingCandidate) -> Self {
+        Self {
+            meeting,
+            authorized_app_keys: HashSet::new(),
+        }
+    }
+
+    fn authorize_app(&mut self, window: &WindowSnapshot) {
+        self.authorized_app_keys.insert(window.app_identity_key());
+    }
+
+    fn is_app_authorized(&self, window: &WindowSnapshot) -> bool {
+        self.authorized_app_keys
+            .contains(&window.app_identity_key())
+    }
 }
 
 pub struct FocusGuard {
@@ -143,17 +167,17 @@ impl FocusGuard {
                 candidate: candidate.clone(),
                 pin_configured,
             },
-            GuardPhase::Guarding(meeting) => GuardView::Guarding {
-                meeting: meeting.clone(),
+            GuardPhase::Guarding(session) => GuardView::Guarding {
+                meeting: session.meeting.clone(),
                 pin_configured,
             },
             GuardPhase::Locked {
-                meeting,
+                session,
                 focused,
                 failed_attempts,
                 last_error,
             } => GuardView::Locked {
-                meeting: meeting.clone(),
+                meeting: session.meeting.clone(),
                 focused: LockedFocus::from(focused),
                 failed_attempts: *failed_attempts,
                 pin_configured,
@@ -174,13 +198,13 @@ impl FocusGuard {
         match self.phase.clone() {
             GuardPhase::Idle => self.observe_from_idle(window),
             GuardPhase::Candidate(candidate) => self.observe_from_candidate(candidate, window),
-            GuardPhase::Guarding(meeting) => self.observe_from_guarding(meeting, window),
+            GuardPhase::Guarding(session) => self.observe_from_guarding(session, window),
             GuardPhase::Locked {
-                meeting,
+                session,
                 focused,
                 failed_attempts,
                 last_error,
-            } => self.observe_from_locked(meeting, focused, failed_attempts, last_error, window),
+            } => self.observe_from_locked(session, focused, failed_attempts, last_error, window),
         }
     }
 
@@ -194,7 +218,7 @@ impl FocusGuard {
         };
 
         let meeting = candidate.clone();
-        self.phase = GuardPhase::Guarding(meeting.clone());
+        self.phase = GuardPhase::Guarding(GuardSession::new(meeting.clone()));
         Ok(vec![GuardCommand::BeginGuarding { meeting }])
     }
 
@@ -213,7 +237,7 @@ impl FocusGuard {
 
     pub fn submit_pin(&mut self, pin: &str) -> Result<PinSubmission, GuardError> {
         let GuardPhase::Locked {
-            meeting,
+            mut session,
             focused,
             failed_attempts,
             ..
@@ -228,7 +252,8 @@ impl FocusGuard {
 
         match pin_hash.verify(pin) {
             Ok(()) => {
-                self.phase = GuardPhase::Guarding(meeting);
+                session.authorize_app(&focused);
+                self.phase = GuardPhase::Guarding(session);
                 let commands = vec![GuardCommand::Unlock];
                 Ok(PinSubmission {
                     accepted: true,
@@ -240,7 +265,7 @@ impl FocusGuard {
             Err(PinError::InvalidFormat | PinError::VerificationFailed) => {
                 let failed_attempts = failed_attempts + 1;
                 self.phase = GuardPhase::Locked {
-                    meeting,
+                    session,
                     focused,
                     failed_attempts,
                     last_error: Some("That PIN did not open Stay.".to_string()),
@@ -300,45 +325,73 @@ impl FocusGuard {
 
     fn observe_from_guarding(
         &mut self,
-        meeting: MeetingCandidate,
+        session: GuardSession,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
-        if self.classifier.is_same_meeting_window(&meeting, &window) {
+        if self
+            .classifier
+            .is_same_meeting_window(&session.meeting, &window)
+        {
+            return Vec::new();
+        }
+
+        if session.is_app_authorized(&window) {
             return Vec::new();
         }
 
         self.phase = GuardPhase::Locked {
-            meeting: meeting.clone(),
+            session: session.clone(),
             focused: window.clone(),
             failed_attempts: 0,
             last_error: None,
         };
         vec![GuardCommand::ShowLock {
-            meeting,
+            meeting: session.meeting,
             focused: LockedFocus::from(&window),
         }]
     }
 
     fn observe_from_locked(
         &mut self,
-        meeting: MeetingCandidate,
+        session: GuardSession,
         focused: WindowSnapshot,
         failed_attempts: u32,
         last_error: Option<String>,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
-        let focused = if self.classifier.is_same_meeting_window(&meeting, &window) {
-            focused
-        } else {
-            window
-        };
+        if self
+            .classifier
+            .is_same_meeting_window(&session.meeting, &window)
+        {
+            self.phase = GuardPhase::Locked {
+                session,
+                focused,
+                failed_attempts,
+                last_error,
+            };
+            return Vec::new();
+        }
 
+        if focused == window {
+            self.phase = GuardPhase::Locked {
+                session,
+                focused,
+                failed_attempts,
+                last_error,
+            };
+            return Vec::new();
+        }
+
+        let command = GuardCommand::ShowLock {
+            meeting: session.meeting.clone(),
+            focused: LockedFocus::from(&window),
+        };
         self.phase = GuardPhase::Locked {
-            meeting,
-            focused,
+            session,
+            focused: window,
             failed_attempts,
             last_error,
         };
-        Vec::new()
+        vec![command]
     }
 }
