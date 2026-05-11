@@ -14,6 +14,7 @@ capture the screen, phone home, score attention, or give managers a dashboard.
 
 - Rust workspace with `stay-core`, `stay-platform`, and `stay-e2e` crates.
 - Tauri v2 desktop shell in `apps/desktop`.
+- Modern React and TypeScript GUI source with deterministic frontend tests.
 - Foreground-window meeting detection heuristics for Zoom, Google Meet,
   Microsoft Teams, FaceTime, Webex, and Slack huddles.
 - Four digit PIN guard driven by the Rust state machine.
@@ -35,6 +36,14 @@ npm install
 npm run dev
 ```
 
+For the GUI test/build loop without launching the native desktop shell:
+
+```sh
+cd apps/desktop
+npm run typecheck
+npm run test
+npm run frontend:build
+```
+
 See `docs/development.md` and `docs/platform-permissions.md` for the working
 notes that future implementation agents should read first.
-

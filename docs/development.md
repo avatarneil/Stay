@@ -8,7 +8,7 @@ Stay is organized around a Rust core with thin adapters around it.
   state transitions.
 - `crates/stay-platform`: native active-window adapter.
 - `crates/stay-e2e`: deterministic end-to-end scenario runner.
-- `apps/desktop`: Tauri v2 shell and quiet local UI.
+- `apps/desktop`: Tauri v2 shell and quiet React/TypeScript GUI.
 
 ## Verification
 
@@ -25,6 +25,8 @@ Run focused suites while working:
 cargo test -p stay-core
 cargo test -p stay-platform
 cargo test -p stay-desktop
+cd apps/desktop && npm run typecheck
+cd apps/desktop && npm run test
 ```
 
 The scripted E2E runner is intentionally independent of the host desktop. It
@@ -33,13 +35,34 @@ used by the Tauri app.
 
 ## Desktop Shell
 
-The Tauri shell renders static files from `apps/desktop/dist` and calls Rust
-commands through the Tauri bridge. To run it locally:
+The Tauri shell renders generated files from `apps/desktop/dist` and calls Rust
+commands through the Tauri bridge. Authored GUI source lives in
+`apps/desktop/src`; do not edit generated `dist` files by hand.
+
+To run the native shell locally:
 
 ```sh
 cd apps/desktop
 npm install
 npm run dev
+```
+
+To work on the GUI without launching Tauri, run the Vite dev server:
+
+```sh
+cd apps/desktop
+npm run frontend:dev
+```
+
+Outside the Tauri runtime, the GUI uses the deterministic mock Stay client. This
+lets agents inspect and test mode transitions in a browser without foreground
+window permissions.
+
+Production GUI assets are generated with:
+
+```sh
+cd apps/desktop
+npm run frontend:build
 ```
 
 The current window is always-on-top and positioned near the top-right monitor
@@ -49,5 +72,8 @@ edge at startup. This is a friction layer, not an OS-level security boundary.
 
 - Keep policy in `stay-core`; UI code should render state and send user actions.
 - Keep platform behavior behind traits so tests can stay deterministic.
+- Keep Tauri calls behind the typed `apps/desktop/src/stayClient.ts` boundary so
+  frontend tests can mock app state without duplicating Rust policy.
+- Keep GUI components state-driven; `GuardView` is the rendering contract.
 - Do not add telemetry, scoring, team enforcement, or remote activity reporting.
 - Treat the PIN as voluntary friction, not strong authentication.

@@ -4,6 +4,9 @@
   "version": "0.1.0",
   "identifier": "com.stay.present",
   "build": {
+    "beforeDevCommand": "npm run frontend:dev",
+    "beforeBuildCommand": "npm run frontend:build",
+    "devUrl": "http://127.0.0.1:1420",
     "frontendDist": "../dist"
   },
   "app": {

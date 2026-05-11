@@ -52,3 +52,28 @@ jobs:
 
       - name: Scripted E2E
         run: cargo run -p stay-e2e
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Verify frontend
+        working-directory: apps/desktop
+        run: |
+          npm run typecheck
+          npm run test
+          npm run frontend:build
