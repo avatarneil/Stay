@@ -1,7 +1,7 @@
 ---
 title: "feat: Keep Lock Overlay on Focused App and Cache Meeting App Unlocks"
 type: feat
-status: active
+status: completed
 date: 2026-05-11
 ---
 
