@@ -17,8 +17,9 @@ const unlockPin = document.querySelector("#unlock-pin");
 const unlockStay = document.querySelector("#unlock-stay");
 const pinError = document.querySelector("#pin-error");
 
-const { invoke } = window.__TAURI__.core;
-const { listen } = window.__TAURI__.event;
+const tauri = window.__TAURI__ || createBrowserMock();
+const { invoke } = tauri.core;
+const { listen } = tauri.event;
 
 function onlyDigits(value) {
   return value.replace(/\D/g, "").slice(0, 4);
@@ -104,3 +105,110 @@ listen("stay-state-changed", (event) => {
 });
 
 refresh();
+
+function createBrowserMock() {
+  const listeners = [];
+  const meeting = {
+    app: "zoom",
+    window: {
+      app_name: "zoom.us",
+      title: "Weekly Team Sync",
+      process_id: null,
+      window_id: null,
+      process_path: null,
+    },
+    reason: "Zoom foreground window",
+  };
+  let configuredPin = null;
+  let view = { mode: "idle", pin_configured: false };
+
+  function emit() {
+    listeners.forEach((listener) => listener({ payload: { view } }));
+  }
+
+  function setView(nextView) {
+    view = nextView;
+    emit();
+    return { view, commands: [] };
+  }
+
+  window.__stayMock = {
+    focusMeeting() {
+      return setView({
+        mode: "meeting_candidate",
+        candidate: meeting,
+        pin_configured: Boolean(configuredPin),
+      });
+    },
+    focusAway() {
+      return setView({
+        mode: "locked",
+        meeting,
+        focused: {
+          app_name: "Safari",
+          title: "Quarterly planning notes",
+        },
+        failed_attempts: 0,
+        pin_configured: Boolean(configuredPin),
+        last_error: null,
+      });
+    },
+    view() {
+      return view;
+    },
+  };
+
+  return {
+    core: {
+      async invoke(name, args = {}) {
+        if (name === "current_state") {
+          return view;
+        }
+        if (name === "set_pin") {
+          if (!/^\d{4}$/.test(args.pin || "")) {
+            throw new Error("PIN must be exactly four digits");
+          }
+          configuredPin = args.pin;
+          return setView({ mode: "idle", pin_configured: true });
+        }
+        if (name === "accept_stay") {
+          return setView({ mode: "guarding", meeting, pin_configured: true });
+        }
+        if (name === "dismiss_candidate") {
+          return setView({ mode: "idle", pin_configured: Boolean(configuredPin) });
+        }
+        if (name === "stop_guarding") {
+          return setView({ mode: "idle", pin_configured: Boolean(configuredPin) });
+        }
+        if (name === "submit_pin") {
+          if (args.pin === configuredPin) {
+            return setView({ mode: "guarding", meeting, pin_configured: true });
+          }
+          return setView({
+            mode: "locked",
+            meeting,
+            focused: {
+              app_name: "Safari",
+              title: "Quarterly planning notes",
+            },
+            failed_attempts: 1,
+            pin_configured: true,
+            last_error: "That PIN did not open Stay.",
+          });
+        }
+        throw new Error(`Unknown command: ${name}`);
+      },
+    },
+    event: {
+      async listen(_eventName, listener) {
+        listeners.push(listener);
+        return () => {
+          const index = listeners.indexOf(listener);
+          if (index >= 0) {
+            listeners.splice(index, 1);
+          }
+        };
+      },
+    },
+  };
+}
