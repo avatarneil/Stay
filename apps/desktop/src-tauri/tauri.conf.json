@@ -17,7 +17,7 @@
         "title": "Stay",
         "url": "index.html",
         "width": 420,
-        "height": 300,
+        "height": 340,
         "minWidth": 360,
         "minHeight": 240,
         "resizable": false,

@@ -12,7 +12,7 @@ export function StatusShell({ mode, children, status }: StatusShellProps) {
       <header className="brand-strip">
         <div>
           <p className="eyebrow">Stay</p>
-          <h1>Their hour deserves your hour.</h1>
+          <h1>Stay focused.</h1>
         </div>
         {status ? <span className="status-pill">{status}</span> : null}
       </header>

@@ -1,5 +1,7 @@
 use serde::Serialize;
-use stay_core::{FocusGuard, GuardCommand, GuardView, MeetingClassifier, WindowSnapshot};
+use stay_core::{
+    FocusGuard, GuardCommand, GuardView, LockedFocus, MeetingClassifier, WindowSnapshot,
+};
 use stay_platform::{ActiveWinFocusProvider, FocusProvider};
 use std::sync::Mutex;
 use std::thread;
@@ -7,7 +9,7 @@ use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewWindow};
 
 const COMPACT_WINDOW_WIDTH: i32 = 420;
-const COMPACT_WINDOW_HEIGHT: i32 = 300;
+const COMPACT_WINDOW_HEIGHT: i32 = 340;
 const WINDOW_MARGIN: i32 = 24;
 const POLL_INTERVAL: Duration = Duration::from_millis(750);
 
@@ -250,11 +252,14 @@ fn position_monitor_overlay(window: &WebviewWindow) -> tauri::Result<()> {
 }
 
 fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> tauri::Result<()> {
-    if commands
-        .iter()
-        .any(|command| matches!(command, GuardCommand::ShowLock { .. }))
-    {
-        return position_monitor_overlay(window);
+    if let Some(focused) = commands.iter().find_map(|command| {
+        if let GuardCommand::ShowLock { focused, .. } = command {
+            Some(focused)
+        } else {
+            None
+        }
+    }) {
+        return position_focused_window_overlay(window, focused);
     }
 
     if commands.iter().any(|command| {
@@ -270,5 +275,28 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
         position_top_right(window)?;
     }
 
+    Ok(())
+}
+
+fn position_focused_window_overlay(
+    window: &WebviewWindow,
+    focused: &LockedFocus,
+) -> tauri::Result<()> {
+    let Some(bounds) = &focused.bounds else {
+        return position_monitor_overlay(window);
+    };
+
+    if bounds.width == 0 || bounds.height == 0 {
+        return position_monitor_overlay(window);
+    }
+
+    window.set_position(tauri::Position::Physical(PhysicalPosition {
+        x: bounds.x,
+        y: bounds.y,
+    }))?;
+    window.set_size(tauri::Size::Physical(PhysicalSize {
+        width: bounds.width,
+        height: bounds.height,
+    }))?;
     Ok(())
 }

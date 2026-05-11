@@ -1,5 +1,6 @@
 use stay_core::{
-    FocusGuard, GuardCommand, GuardView, MeetingApp, MeetingClassifier, PinHash, WindowSnapshot,
+    FocusGuard, GuardCommand, GuardView, MeetingApp, MeetingClassifier, PinHash, WindowBounds,
+    WindowSnapshot,
 };
 
 fn window(app: &str, title: &str) -> WindowSnapshot {
@@ -72,6 +73,33 @@ fn locks_when_focus_leaves_guarded_meeting_and_unlocks_with_pin() {
     let accepted = guard.submit_pin("4821").unwrap();
     assert!(accepted.accepted);
     assert!(matches!(guard.view(), GuardView::Guarding { .. }));
+}
+
+#[test]
+fn carries_focused_window_bounds_into_lock_state() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+
+    let focused_bounds = WindowBounds {
+        x: 96,
+        y: 88,
+        width: 680,
+        height: 420,
+    };
+    let commands = guard.observe_focus(Some(
+        window("Safari", "Quarterly planning notes").with_bounds(focused_bounds.clone()),
+    ));
+
+    let [GuardCommand::ShowLock { focused, .. }] = commands.as_slice() else {
+        panic!("expected one ShowLock command");
+    };
+    assert_eq!(focused.bounds.as_ref(), Some(&focused_bounds));
+
+    let GuardView::Locked { focused, .. } = guard.view() else {
+        panic!("expected locked view");
+    };
+    assert_eq!(focused.bounds.as_ref(), Some(&focused_bounds));
 }
 
 #[test]

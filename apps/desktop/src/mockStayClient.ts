@@ -113,6 +113,7 @@ export function createMockStayClient(initialView?: GuardView): MockStayClient {
           focused: {
             app_name: awayWindow.app_name,
             title: awayWindow.title,
+            bounds: awayWindow.bounds,
           },
           failed_attempts: 0,
           pin_configured: Boolean(configuredPin),
@@ -125,6 +126,7 @@ export function createMockStayClient(initialView?: GuardView): MockStayClient {
             focused: {
               app_name: awayWindow.app_name,
               title: awayWindow.title,
+              bounds: awayWindow.bounds,
             },
           },
         ],
@@ -145,5 +147,11 @@ function windowSnapshot(appName: string, title: string): WindowSnapshot {
     process_id: null,
     window_id: null,
     process_path: null,
+    bounds: {
+      x: 96,
+      y: 88,
+      width: 680,
+      height: 420,
+    },
   };
 }

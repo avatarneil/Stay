@@ -12,6 +12,14 @@ export type WindowSnapshot = {
   process_id: number | null;
   window_id: string | null;
   process_path: string | null;
+  bounds: WindowBounds | null;
+};
+
+export type WindowBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
 };
 
 export type MeetingCandidate = {
@@ -23,6 +31,7 @@ export type MeetingCandidate = {
 export type LockedFocus = {
   app_name: string;
   title: string;
+  bounds: WindowBounds | null;
 };
 
 export type GuardView =

@@ -106,7 +106,7 @@ export function App({ client }: AppProps) {
         <PinSetup error={setupError} onSave={(pin) => runCommand(() => client.setPin(pin), "setup")} />
       ) : null}
 
-      {!isLoading && view.mode === "idle" ? (
+      {!isLoading && view.mode === "idle" && view.pin_configured ? (
         <section className="mode-panel quiet-state">
           <p className="kicker">Ready</p>
           <h2>Stay is waiting.</h2>
