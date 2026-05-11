@@ -8,8 +8,8 @@ use std::thread;
 use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewWindow};
 
-const COMPACT_WINDOW_WIDTH: i32 = 420;
-const COMPACT_WINDOW_HEIGHT: i32 = 340;
+const COMPACT_WINDOW_WIDTH: i32 = 960;
+const COMPACT_WINDOW_HEIGHT: i32 = 480;
 const WINDOW_MARGIN: i32 = 24;
 const POLL_INTERVAL: Duration = Duration::from_millis(750);
 
@@ -230,6 +230,7 @@ fn position_top_right(window: &WebviewWindow) -> tauri::Result<()> {
         height: COMPACT_WINDOW_HEIGHT as u32,
     }))?;
     window.set_position(tauri::Position::Physical(PhysicalPosition { x, y }))?;
+    window.show()?;
     Ok(())
 }
 
@@ -248,6 +249,7 @@ fn position_monitor_overlay(window: &WebviewWindow) -> tauri::Result<()> {
         width: monitor_size.width,
         height: monitor_size.height,
     }))?;
+    window.show()?;
     Ok(())
 }
 
@@ -298,5 +300,6 @@ fn position_focused_window_overlay(
         width: bounds.width,
         height: bounds.height,
     }))?;
+    window.show()?;
     Ok(())
 }
