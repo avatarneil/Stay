@@ -142,4 +142,7 @@ The long-horizon things this brand is trying to do. If any future decision confl
 
 When a brand decision gets made that isn't obvious from the principles above, record it here so it doesn't have to be re-litigated.
 
-- _(none yet)_
+- Local foreground-window metadata is acceptable for v1 meeting detection because
+  it stays on the user's machine and supports the opt-in gesture. Audio
+  recording, transcription, screenshots, telemetry, productivity scoring, and
+  team enforcement remain outside Stay.
