@@ -15,15 +15,18 @@
 }
 
 body {
+  width: 100vw;
   min-height: 100vh;
   margin: 0;
   background: transparent;
+  overflow: hidden;
 }
 
 .panel {
-  width: min(100vw, 360px);
-  min-height: 190px;
+  width: 100vw;
+  height: 100vh;
   padding: 18px;
+  overflow: hidden;
   background: rgba(252, 250, 245, 0.97);
   border: 1px solid rgba(54, 48, 39, 0.14);
   border-radius: 8px;
@@ -55,6 +58,15 @@ h2 {
 
 h2 {
   font-size: 20px;
+}
+
+.brand,
+.screen,
+.muted,
+h1,
+h2 {
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .muted {
@@ -117,6 +129,7 @@ button.ghost {
 
 .actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   margin-top: 14px;
 }

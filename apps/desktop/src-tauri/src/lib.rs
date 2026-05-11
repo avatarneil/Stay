@@ -4,10 +4,9 @@ use stay_platform::{ActiveWinFocusProvider, FocusProvider};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
-use tauri::{Emitter, Manager, PhysicalPosition, State, WebviewWindow};
+use tauri::{Emitter, Manager, PhysicalPosition, PhysicalRect, PhysicalSize, State, WebviewWindow};
 
-const WINDOW_WIDTH: i32 = 360;
-const WINDOW_MARGIN: i32 = 24;
+const WINDOW_MARGIN_LOGICAL: f64 = 24.0;
 const POLL_INTERVAL: Duration = Duration::from_millis(750);
 
 pub struct AppState {
@@ -194,10 +193,101 @@ fn position_top_right(window: &WebviewWindow) -> tauri::Result<()> {
         return Ok(());
     };
 
-    let monitor_position = monitor.position();
-    let monitor_size = monitor.size();
-    let x = monitor_position.x + monitor_size.width as i32 - WINDOW_WIDTH - WINDOW_MARGIN;
-    let y = monitor_position.y + WINDOW_MARGIN;
-    window.set_position(tauri::Position::Physical(PhysicalPosition { x, y }))?;
+    let margin = logical_margin_to_physical(monitor.scale_factor());
+    let position = top_right_position(*monitor.work_area(), window.outer_size()?, margin);
+    window.set_position(tauri::Position::Physical(position))?;
     Ok(())
+}
+
+fn logical_margin_to_physical(scale_factor: f64) -> i32 {
+    (WINDOW_MARGIN_LOGICAL * scale_factor).round() as i32
+}
+
+fn top_right_position(
+    work_area: PhysicalRect<i32, u32>,
+    window_size: PhysicalSize<u32>,
+    margin: i32,
+) -> PhysicalPosition<i32> {
+    let x = clamp_axis_to_work_area(
+        work_area.position.x + work_area.size.width as i32 - window_size.width as i32 - margin,
+        work_area.position.x,
+        work_area.size.width,
+        window_size.width,
+        margin,
+    );
+    let y = clamp_axis_to_work_area(
+        work_area.position.y + margin,
+        work_area.position.y,
+        work_area.size.height,
+        window_size.height,
+        margin,
+    );
+
+    PhysicalPosition { x, y }
+}
+
+fn clamp_axis_to_work_area(
+    preferred_start: i32,
+    area_start: i32,
+    area_length: u32,
+    item_length: u32,
+    margin: i32,
+) -> i32 {
+    let min_start = area_start + margin;
+    let max_start = area_start + area_length as i32 - item_length as i32 - margin;
+
+    if max_start < min_start {
+        area_start
+    } else {
+        preferred_start.clamp(min_start, max_start)
+    }
+}
+
+#[cfg(test)]
+mod window_position_tests {
+    use super::*;
+
+    #[test]
+    fn positions_window_inside_scaled_work_area() {
+        let work_area = PhysicalRect {
+            position: PhysicalPosition { x: 0, y: 48 },
+            size: PhysicalSize {
+                width: 1512,
+                height: 934,
+            },
+        };
+
+        let position = top_right_position(
+            work_area,
+            PhysicalSize {
+                width: 720,
+                height: 640,
+            },
+            48,
+        );
+
+        assert_eq!(position, PhysicalPosition { x: 744, y: 96 });
+    }
+
+    #[test]
+    fn clamps_position_when_window_is_larger_than_the_work_area() {
+        let work_area = PhysicalRect {
+            position: PhysicalPosition { x: 120, y: 80 },
+            size: PhysicalSize {
+                width: 500,
+                height: 300,
+            },
+        };
+
+        let position = top_right_position(
+            work_area,
+            PhysicalSize {
+                width: 640,
+                height: 360,
+            },
+            24,
+        );
+
+        assert_eq!(position, PhysicalPosition { x: 120, y: 80 });
+    }
 }
