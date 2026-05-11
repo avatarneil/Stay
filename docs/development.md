@@ -25,8 +25,8 @@ Run focused suites while working:
 cargo test -p stay-core
 cargo test -p stay-platform
 cargo test -p stay-desktop
-cd apps/desktop && npm run typecheck
-cd apps/desktop && npm run test
+cd apps/desktop && bun run typecheck
+cd apps/desktop && bun run test
 ```
 
 The scripted E2E runner is intentionally independent of the host desktop. It
@@ -39,19 +39,23 @@ The Tauri shell renders generated files from `apps/desktop/dist` and calls Rust
 commands through the Tauri bridge. Authored GUI source lives in
 `apps/desktop/src`; do not edit generated `dist` files by hand.
 
+The desktop package is Bun-managed. Use the repository `.bun-version` and the
+committed `apps/desktop/bun.lock` when installing or updating JavaScript
+tooling.
+
 To run the native shell locally:
 
 ```sh
 cd apps/desktop
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 To work on the GUI without launching Tauri, run the Vite dev server:
 
 ```sh
 cd apps/desktop
-npm run frontend:dev
+bun run frontend:dev
 ```
 
 Outside the Tauri runtime, the GUI uses the deterministic mock Stay client. This
@@ -64,7 +68,7 @@ Production GUI assets are generated with:
 
 ```sh
 cd apps/desktop
-npm run frontend:build
+bun run frontend:build
 ```
 
 The current window is always-on-top and positioned near the top-right monitor

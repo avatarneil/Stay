@@ -32,17 +32,17 @@ For the desktop shell:
 
 ```sh
 cd apps/desktop
-npm install
-npm run dev
+bun install
+bun run dev
 ```
 
 For the GUI test/build loop without launching the native desktop shell:
 
 ```sh
 cd apps/desktop
-npm run typecheck
-npm run test
-npm run frontend:build
+bun run typecheck
+bun run test
+bun run frontend:build
 ```
 
 See `docs/development.md` and `docs/platform-permissions.md` for the working
