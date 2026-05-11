@@ -25,6 +25,11 @@ fn maps_native_active_window_to_core_snapshot() {
         snapshot.process_path.as_deref(),
         Some("/Applications/Arc.app")
     );
+    assert_eq!(snapshot.bounds.as_ref().map(|bounds| bounds.x), Some(1));
+    assert_eq!(
+        snapshot.bounds.as_ref().map(|bounds| bounds.width),
+        Some(800)
+    );
 }
 
 #[derive(Default)]

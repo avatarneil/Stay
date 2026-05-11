@@ -1,4 +1,4 @@
-use crate::focus::WindowSnapshot;
+use crate::focus::{WindowBounds, WindowSnapshot};
 use crate::meeting::{MeetingCandidate, MeetingClassifier};
 use crate::pin::{PinError, PinHash};
 use serde::{Deserialize, Serialize};
@@ -32,6 +32,7 @@ pub enum GuardView {
 pub struct LockedFocus {
     pub app_name: String,
     pub title: String,
+    pub bounds: Option<WindowBounds>,
 }
 
 impl From<&WindowSnapshot> for LockedFocus {
@@ -39,6 +40,7 @@ impl From<&WindowSnapshot> for LockedFocus {
         Self {
             app_name: window.app_name.clone(),
             title: window.title.clone(),
+            bounds: window.bounds.clone(),
         }
     }
 }

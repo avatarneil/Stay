@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Local Stay desktop window capability.",
   "windows": ["main"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:window:allow-hide"]
 }

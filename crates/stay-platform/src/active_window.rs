@@ -1,5 +1,5 @@
 use active_win_pos_rs::{ActiveWindow, get_active_window};
-use stay_core::WindowSnapshot;
+use stay_core::{WindowBounds, WindowSnapshot};
 use thiserror::Error;
 
 pub trait FocusProvider {
@@ -33,5 +33,11 @@ pub fn active_window_to_snapshot(window: ActiveWindow) -> WindowSnapshot {
         process_id: Some(window.process_id),
         window_id: Some(window.window_id),
         process_path: Some(window.process_path.display().to_string()),
+        bounds: Some(WindowBounds {
+            x: window.position.x.round() as i32,
+            y: window.position.y.round() as i32,
+            width: window.position.width.max(0.0).round() as u32,
+            height: window.position.height.max(0.0).round() as u32,
+        }),
     }
 }

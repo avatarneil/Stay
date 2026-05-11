@@ -7,7 +7,7 @@ on:
 
 jobs:
   rust:
-    name: Checks (${{ matrix.os }})
+    name: Rust checks (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -16,15 +16,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version-file: .bun-version
-
-      - name: Verify desktop package lockfile
-        working-directory: apps/desktop
-        run: bun install --frozen-lockfile
 
       - name: Install Linux system dependencies
         if: runner.os == 'Linux'
@@ -61,3 +52,26 @@ jobs:
 
       - name: Scripted E2E
         run: cargo run -p stay-e2e
+
+  frontend:
+    name: Frontend checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install frontend dependencies
+        working-directory: apps/desktop
+        run: bun install --frozen-lockfile
+
+      - name: Verify frontend
+        working-directory: apps/desktop
+        run: |
+          bun run typecheck
+          bun run test
+          bun run frontend:build

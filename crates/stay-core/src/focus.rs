@@ -7,6 +7,15 @@ pub struct WindowSnapshot {
     pub process_id: Option<u64>,
     pub window_id: Option<String>,
     pub process_path: Option<String>,
+    pub bounds: Option<WindowBounds>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
+pub struct WindowBounds {
+    pub x: i32,
+    pub y: i32,
+    pub width: u32,
+    pub height: u32,
 }
 
 impl WindowSnapshot {
@@ -17,6 +26,7 @@ impl WindowSnapshot {
             process_id: None,
             window_id: None,
             process_path: None,
+            bounds: None,
         }
     }
 
@@ -27,6 +37,11 @@ impl WindowSnapshot {
 
     pub fn with_window_id(mut self, window_id: impl Into<String>) -> Self {
         self.window_id = Some(window_id.into());
+        self
+    }
+
+    pub fn with_bounds(mut self, bounds: WindowBounds) -> Self {
+        self.bounds = Some(bounds);
         self
     }
 
