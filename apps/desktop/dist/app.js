@@ -1,6 +1,7 @@
 const app = document.querySelector("#app");
 const setupPin = document.querySelector("#setup-pin");
 const savePin = document.querySelector("#save-pin");
+const setupError = document.querySelector("#setup-error");
 const candidate = document.querySelector("#candidate");
 const candidateApp = document.querySelector("#candidate-app");
 const candidateTitle = document.querySelector("#candidate-title");
@@ -59,9 +60,18 @@ async function refresh() {
   render(await invoke("current_state"));
 }
 
-async function command(name, args = {}) {
-  const response = await invoke(name, args);
-  render(response.view || response);
+async function command(name, args = {}, errorTarget = pinError) {
+  try {
+    if (errorTarget) {
+      errorTarget.textContent = "";
+    }
+    const response = await invoke(name, args);
+    render(response.view || response);
+  } catch (error) {
+    if (errorTarget) {
+      errorTarget.textContent = String(error);
+    }
+  }
 }
 
 [setupPin, unlockPin].forEach((input) => {
@@ -71,7 +81,7 @@ async function command(name, args = {}) {
 });
 
 savePin.addEventListener("click", async () => {
-  await command("set_pin", { pin: setupPin.value });
+  await command("set_pin", { pin: setupPin.value }, setupError);
   setupPin.value = "";
 });
 
