@@ -1,0 +1,23 @@
+[package]
+name = "stay-desktop"
+description = "Stay desktop application."
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+version.workspace = true
+build = "build.rs"
+
+[lib]
+name = "stay_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+stay-core = { path = "../../../crates/stay-core" }
+stay-platform = { path = "../../../crates/stay-platform" }
+tauri.workspace = true
+
+[build-dependencies]
+tauri-build.workspace = true

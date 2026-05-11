@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Stay</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="app" class="panel panel-idle" aria-live="polite">
+      <section class="brand">
+        <p class="eyebrow">Stay</p>
+        <h1>Their hour deserves your hour.</h1>
+      </section>
+
+      <section id="pin-setup" class="pin-setup">
+        <label for="setup-pin">Set a four digit PIN</label>
+        <div class="row">
+          <input
+            id="setup-pin"
+            inputmode="numeric"
+            maxlength="4"
+            pattern="[0-9]{4}"
+            autocomplete="off"
+            aria-label="Four digit PIN"
+          />
+          <button id="save-pin" type="button">Keep</button>
+        </div>
+        <p id="setup-error" class="error" role="status"></p>
+      </section>
+
+      <section id="candidate" class="screen" hidden>
+        <p class="kicker" id="candidate-app">Meeting detected</p>
+        <h2>Stay present?</h2>
+        <p id="candidate-title" class="muted"></p>
+        <div class="actions">
+          <button id="accept-stay" type="button">Stay present</button>
+          <button id="dismiss-stay" type="button" class="ghost">Not now</button>
+        </div>
+      </section>
+
+      <section id="guarding" class="screen" hidden>
+        <p class="kicker">Stay is on</p>
+        <h2 id="guarding-title">You are in the meeting.</h2>
+        <button id="stop-stay" type="button" class="ghost">Stop</button>
+      </section>
+
+      <section id="locked" class="screen" hidden>
+        <p class="kicker">Stay with the call</p>
+        <h2 id="locked-title">Enter your PIN.</h2>
+        <p id="locked-app" class="muted"></p>
+        <div class="row">
+          <input
+            id="unlock-pin"
+            inputmode="numeric"
+            maxlength="4"
+            pattern="[0-9]{4}"
+            autocomplete="off"
+            aria-label="Unlock PIN"
+          />
+          <button id="unlock-stay" type="button">Open</button>
+        </div>
+        <p id="pin-error" class="error" role="status"></p>
+      </section>
+    </main>
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
