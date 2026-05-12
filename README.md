@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="apps/desktop/src-tauri/icons/icon.png" alt="Stay app icon" width="96" height="96">
+</p>
+
 # Stay
 
 > Their hour deserves your hour. Stay in it.
