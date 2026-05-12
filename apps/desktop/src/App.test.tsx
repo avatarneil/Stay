@@ -94,20 +94,22 @@ describe("Stay GUI", () => {
     expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
   });
 
-  it("renders setup command errors inline without changing mode", async () => {
+  it("shows only PIN setup when a meeting is focused before setup", async () => {
     const user = userEvent.setup();
     const client = createMockStayClient();
     client.focusMeeting();
 
     render(<App client={client} />);
 
-    expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stay" })).toBeDisabled();
+    expect(await screen.findByLabelText("Set a four digit PIN")).toBeInTheDocument();
+    expect(screen.getByText("PIN needed")).toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stay" })).not.toBeInTheDocument();
 
     await user.type(screen.getByLabelText("Set a four digit PIN"), "12");
     await user.click(screen.getByRole("button", { name: "Keep" }));
 
     expect(await screen.findByText("PIN must be exactly four digits")).toBeInTheDocument();
-    expect(screen.getByText("Stay with this meeting?")).toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
   });
 });
