@@ -403,7 +403,7 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
             None
         }
     }) {
-        hide_guard_border(&window.app_handle())?;
+        hide_guard_border(window.app_handle())?;
         return position_focused_window_overlay(window, focused);
     }
 
@@ -413,7 +413,7 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
             GuardCommand::BeginGuarding { .. } | GuardCommand::Unlock
         )
     }) {
-        show_guard_border(&window.app_handle(), window)?;
+        show_guard_border(window.app_handle(), window)?;
         position_guarding_handle(window)?;
         return Ok(());
     }
@@ -424,7 +424,7 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
             GuardCommand::ShowPrompt { .. } | GuardCommand::HidePrompt | GuardCommand::StopGuarding
         )
     }) {
-        hide_guard_border(&window.app_handle())?;
+        hide_guard_border(window.app_handle())?;
         position_top_right(window)?;
     }
 
