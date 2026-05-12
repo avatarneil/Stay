@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { App } from "./App";
@@ -37,6 +37,26 @@ describe("Stay GUI", () => {
 
     expect(client.commandLog).toContain("accept_stay");
     expect(await screen.findByText("Stay is on")).toBeInTheDocument();
+  });
+
+  it("collapses the guarding tool until the hover handle is used", async () => {
+    const user = userEvent.setup();
+    const client = createMockStayClient();
+    await client.setPin("4821");
+    client.focusMeeting();
+
+    render(<App client={client} />);
+
+    await user.click(await screen.findByRole("button", { name: "Stay" }));
+
+    const shell = screen.getByRole("main");
+    expect(shell).toHaveClass("stay-shell-collapsed");
+
+    await user.hover(shell);
+    expect(shell).toHaveClass("stay-shell-revealed");
+
+    await user.unhover(shell);
+    await waitFor(() => expect(shell).toHaveClass("stay-shell-collapsed"));
   });
 
   it("submits the unlock PIN from the locked state", async () => {

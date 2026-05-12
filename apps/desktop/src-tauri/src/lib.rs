@@ -7,13 +7,25 @@ use stay_platform::{ActiveWinFocusProvider, FocusProvider};
 use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
-use tauri::{Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewWindow};
+use tauri::{
+    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl, WebviewWindow,
+    WebviewWindowBuilder,
+};
 
 #[cfg(target_os = "macos")]
 use tauri::{LogicalPosition, LogicalSize};
 
-const COMPACT_WINDOW_WIDTH: i32 = 960;
-const COMPACT_WINDOW_HEIGHT: i32 = 480;
+const COMPACT_WINDOW_MIN_WIDTH: u32 = 420;
+const COMPACT_WINDOW_MAX_WIDTH: u32 = 960;
+const COMPACT_WINDOW_MIN_HEIGHT: u32 = 220;
+const COMPACT_WINDOW_MAX_HEIGHT: u32 = 480;
+const COMPACT_WINDOW_WIDTH_RATIO: f64 = 0.25;
+const COMPACT_WINDOW_ASPECT_RATIO: f64 = 2.0;
+const GUARDING_HANDLE_MIN_WIDTH: u32 = 96;
+const GUARDING_HANDLE_MAX_WIDTH: u32 = 168;
+const GUARDING_HANDLE_MIN_HEIGHT: u32 = 34;
+const GUARDING_HANDLE_MAX_HEIGHT: u32 = 48;
+const GUARD_BORDER_LABEL: &str = "guard-border";
 const WINDOW_MARGIN: i32 = 24;
 const POLL_INTERVAL: Duration = Duration::from_millis(750);
 
@@ -33,6 +45,12 @@ enum OverlayGeometry {
         position: LogicalPosition<f64>,
         size: LogicalSize<f64>,
     },
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct WindowGeometry {
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
 }
 
 impl Default for AppState {
@@ -98,6 +116,33 @@ fn submit_pin(
     let response = submit_pin_inner(&state, &pin)?;
     apply_window_commands(&window, &response.commands).map_err(|error| error.to_string())?;
     Ok(response)
+}
+
+#[tauri::command]
+fn set_guarding_panel_expanded(
+    expanded: bool,
+    state: State<'_, AppState>,
+    window: WebviewWindow,
+) -> Result<(), String> {
+    let is_guarding = {
+        let guard = state
+            .guard
+            .lock()
+            .map_err(|_| "Stay state is unavailable")?;
+        matches!(guard.view(), GuardView::Guarding { .. })
+    };
+
+    if !is_guarding {
+        return Ok(());
+    }
+
+    let result = if expanded {
+        position_top_right(&window)
+    } else {
+        position_guarding_handle(&window)
+    };
+
+    result.map_err(|error| error.to_string())
 }
 
 #[tauri::command]
@@ -209,6 +254,7 @@ pub fn run() {
             dismiss_candidate,
             stop_guarding,
             submit_pin,
+            set_guarding_panel_expanded,
             observe_focus_for_test
         ])
         .run(tauri::generate_context!())
@@ -239,17 +285,95 @@ fn position_top_right(window: &WebviewWindow) -> tauri::Result<()> {
         return Ok(());
     };
 
-    let monitor_position = monitor.position();
-    let monitor_size = monitor.size();
-    let x = monitor_position.x + monitor_size.width as i32 - COMPACT_WINDOW_WIDTH - WINDOW_MARGIN;
-    let y = monitor_position.y + WINDOW_MARGIN;
-    window.set_size(tauri::Size::Physical(PhysicalSize {
-        width: COMPACT_WINDOW_WIDTH as u32,
-        height: COMPACT_WINDOW_HEIGHT as u32,
-    }))?;
-    window.set_position(tauri::Position::Physical(PhysicalPosition { x, y }))?;
+    let geometry = compact_window_geometry(*monitor.position(), *monitor.size());
+    window.set_size(tauri::Size::Physical(geometry.size))?;
+    window.set_position(tauri::Position::Physical(geometry.position))?;
     window.show()?;
     Ok(())
+}
+
+fn position_guarding_handle(window: &WebviewWindow) -> tauri::Result<()> {
+    let Some(monitor) = window.current_monitor()? else {
+        return Ok(());
+    };
+
+    let geometry = guarding_handle_geometry(*monitor.position(), *monitor.size());
+    window.set_size(tauri::Size::Physical(geometry.size))?;
+    window.set_position(tauri::Position::Physical(geometry.position))?;
+    window.show()?;
+    Ok(())
+}
+
+fn compact_window_geometry(
+    monitor_position: PhysicalPosition<i32>,
+    monitor_size: PhysicalSize<u32>,
+) -> WindowGeometry {
+    let available_width = available_monitor_axis(monitor_size.width);
+    let available_height = available_monitor_axis(monitor_size.height);
+
+    let width = ((monitor_size.width as f64) * COMPACT_WINDOW_WIDTH_RATIO)
+        .round()
+        .clamp(
+            COMPACT_WINDOW_MIN_WIDTH as f64,
+            COMPACT_WINDOW_MAX_WIDTH as f64,
+        ) as u32;
+    let width = width.min(available_width);
+
+    let height = ((width as f64) / COMPACT_WINDOW_ASPECT_RATIO)
+        .round()
+        .clamp(
+            COMPACT_WINDOW_MIN_HEIGHT as f64,
+            COMPACT_WINDOW_MAX_HEIGHT as f64,
+        ) as u32;
+    let height = height.min(available_height);
+
+    top_right_geometry(monitor_position, monitor_size, width, height)
+}
+
+fn guarding_handle_geometry(
+    monitor_position: PhysicalPosition<i32>,
+    monitor_size: PhysicalSize<u32>,
+) -> WindowGeometry {
+    let compact = compact_window_geometry(monitor_position, monitor_size);
+    let available_width = available_monitor_axis(monitor_size.width);
+    let available_height = available_monitor_axis(monitor_size.height);
+
+    let width = ((compact.size.width as f64) * 0.18).round().clamp(
+        GUARDING_HANDLE_MIN_WIDTH as f64,
+        GUARDING_HANDLE_MAX_WIDTH as f64,
+    ) as u32;
+    let height = ((compact.size.height as f64) * 0.16).round().clamp(
+        GUARDING_HANDLE_MIN_HEIGHT as f64,
+        GUARDING_HANDLE_MAX_HEIGHT as f64,
+    ) as u32;
+
+    top_right_geometry(
+        monitor_position,
+        monitor_size,
+        width.min(available_width),
+        height.min(available_height),
+    )
+}
+
+fn top_right_geometry(
+    monitor_position: PhysicalPosition<i32>,
+    monitor_size: PhysicalSize<u32>,
+    width: u32,
+    height: u32,
+) -> WindowGeometry {
+    let margin = WINDOW_MARGIN.max(0) as u32;
+    let x = monitor_position.x + monitor_size.width.saturating_sub(width + margin) as i32;
+    let y = monitor_position.y + margin as i32;
+
+    WindowGeometry {
+        position: PhysicalPosition { x, y },
+        size: PhysicalSize { width, height },
+    }
+}
+
+fn available_monitor_axis(length: u32) -> u32 {
+    let margin = WINDOW_MARGIN.max(0) as u32;
+    length.saturating_sub(margin * 2).max(1)
 }
 
 fn position_monitor_overlay(window: &WebviewWindow) -> tauri::Result<()> {
@@ -279,20 +403,70 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
             None
         }
     }) {
+        hide_guard_border(window.app_handle())?;
         return position_focused_window_overlay(window, focused);
     }
 
     if commands.iter().any(|command| {
         matches!(
             command,
-            GuardCommand::ShowPrompt { .. }
-                | GuardCommand::HidePrompt
-                | GuardCommand::BeginGuarding { .. }
-                | GuardCommand::Unlock
-                | GuardCommand::StopGuarding
+            GuardCommand::BeginGuarding { .. } | GuardCommand::Unlock
         )
     }) {
+        show_guard_border(window.app_handle(), window)?;
+        position_guarding_handle(window)?;
+        return Ok(());
+    }
+
+    if commands.iter().any(|command| {
+        matches!(
+            command,
+            GuardCommand::ShowPrompt { .. } | GuardCommand::HidePrompt | GuardCommand::StopGuarding
+        )
+    }) {
+        hide_guard_border(window.app_handle())?;
         position_top_right(window)?;
+    }
+
+    Ok(())
+}
+
+fn show_guard_border(app: &AppHandle, anchor: &WebviewWindow) -> tauri::Result<()> {
+    let border = match app.get_webview_window(GUARD_BORDER_LABEL) {
+        Some(border) => border,
+        None => WebviewWindowBuilder::new(
+            app,
+            GUARD_BORDER_LABEL,
+            WebviewUrl::App("index.html".into()),
+        )
+        .title("Stay Guard Border")
+        .decorations(false)
+        .always_on_top(true)
+        .visible_on_all_workspaces(true)
+        .skip_taskbar(true)
+        .transparent(true)
+        .shadow(false)
+        .resizable(false)
+        .focusable(false)
+        .focused(false)
+        .visible(false)
+        .build()?,
+    };
+
+    let Some(monitor) = anchor.current_monitor()? else {
+        return Ok(());
+    };
+
+    border.set_ignore_cursor_events(true)?;
+    border.set_position(tauri::Position::Physical(*monitor.position()))?;
+    border.set_size(tauri::Size::Physical(*monitor.size()))?;
+    border.show()?;
+    Ok(())
+}
+
+fn hide_guard_border(app: &AppHandle) -> tauri::Result<()> {
+    if let Some(border) = app.get_webview_window(GUARD_BORDER_LABEL) {
+        border.hide()?;
     }
 
     Ok(())
@@ -440,5 +614,85 @@ mod tests {
         }));
 
         assert_eq!(focused_overlay_geometry(&focused), None);
+    }
+
+    #[test]
+    fn compact_window_geometry_scales_to_1080p() {
+        assert_eq!(
+            compact_window_geometry(
+                PhysicalPosition { x: 0, y: 0 },
+                PhysicalSize {
+                    width: 1920,
+                    height: 1080,
+                },
+            ),
+            WindowGeometry {
+                position: PhysicalPosition { x: 1416, y: 24 },
+                size: PhysicalSize {
+                    width: 480,
+                    height: 240,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn compact_window_geometry_preserves_current_4k_size() {
+        assert_eq!(
+            compact_window_geometry(
+                PhysicalPosition { x: 0, y: 0 },
+                PhysicalSize {
+                    width: 3840,
+                    height: 2160,
+                },
+            ),
+            WindowGeometry {
+                position: PhysicalPosition { x: 2856, y: 24 },
+                size: PhysicalSize {
+                    width: 960,
+                    height: 480,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn compact_window_geometry_keeps_a_usable_minimum() {
+        assert_eq!(
+            compact_window_geometry(
+                PhysicalPosition { x: 100, y: 50 },
+                PhysicalSize {
+                    width: 1280,
+                    height: 720,
+                },
+            ),
+            WindowGeometry {
+                position: PhysicalPosition { x: 936, y: 74 },
+                size: PhysicalSize {
+                    width: 420,
+                    height: 220,
+                },
+            }
+        );
+    }
+
+    #[test]
+    fn guarding_handle_geometry_uses_top_right_hover_target() {
+        assert_eq!(
+            guarding_handle_geometry(
+                PhysicalPosition { x: 0, y: 0 },
+                PhysicalSize {
+                    width: 1920,
+                    height: 1080,
+                },
+            ),
+            WindowGeometry {
+                position: PhysicalPosition { x: 1800, y: 24 },
+                size: PhysicalSize {
+                    width: 96,
+                    height: 38,
+                },
+            }
+        );
     }
 }

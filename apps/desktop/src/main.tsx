@@ -1,4 +1,5 @@
 import { isTauri } from "@tauri-apps/api/core";
+import { getCurrentWindow } from "@tauri-apps/api/window";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -25,9 +26,33 @@ if (!root) {
 
 createRoot(root).render(
   <StrictMode>
-    <App client={clientFromEnvironment()} />
+    {currentSurface() === "guard-border" ? <GuardBorder /> : <App client={clientFromEnvironment()} />}
   </StrictMode>,
 );
+
+function GuardBorder() {
+  return (
+    <div className="guard-border-surface" aria-hidden="true">
+      <div className="guard-border-frame" />
+    </div>
+  );
+}
+
+function currentSurface(): "main" | "guard-border" {
+  if (new URLSearchParams(window.location.search).get("surface") === "guard-border") {
+    return "guard-border";
+  }
+
+  if (!isTauri()) {
+    return "main";
+  }
+
+  try {
+    return getCurrentWindow().label === "guard-border" ? "guard-border" : "main";
+  } catch {
+    return "main";
+  }
+}
 
 function clientFromEnvironment(): StayClient {
   if (window.__STAY_CLIENT__) {
