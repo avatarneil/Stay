@@ -6,6 +6,7 @@
   "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "tauri dev",
+    "dev:worktree": "bash ../../scripts/stay-worktree-dev.sh",
     "frontend:dev": "vite --host 127.0.0.1",
     "frontend:build": "vite build",
     "build": "tauri build",

@@ -59,6 +59,10 @@ impl WindowSnapshot {
         normalize(&self.app_name)
     }
 
+    pub fn app_identity_key(&self) -> String {
+        self.app_name_normalized()
+    }
+
     pub fn title_normalized(&self) -> String {
         normalize(&self.title)
     }

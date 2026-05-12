@@ -51,6 +51,29 @@ bun install
 bun run dev
 ```
 
+To run multiple worktrees at the same time, launch each checkout through the
+worktree dev sandbox. It gives that checkout a deterministic frontend port and
+temporary Tauri identifier so concurrent shells do not fight over `1420` or the
+same app identity:
+
+```sh
+cd apps/desktop
+bun run dev:worktree
+```
+
+Pass an explicit port when you want fixed lanes:
+
+```sh
+cd apps/desktop
+bun run dev:worktree -- 1431
+```
+
+The same helper can be run from the repository root:
+
+```sh
+scripts/stay-worktree-dev.sh 1431
+```
+
 To work on the GUI without launching Tauri, run the Vite dev server:
 
 ```sh

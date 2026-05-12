@@ -76,6 +76,64 @@ fn locks_when_focus_leaves_guarded_meeting_and_unlocks_with_pin() {
 }
 
 #[test]
+fn successful_pin_authorizes_app_for_current_meeting() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+
+    guard.observe_focus(Some(window("Safari", "Quarterly planning notes")));
+    let accepted = guard.submit_pin("4821").unwrap();
+    assert!(accepted.accepted);
+
+    assert!(
+        guard
+            .observe_focus(Some(window("zoom.us", "Weekly Team Sync")))
+            .is_empty()
+    );
+    let commands = guard.observe_focus(Some(window("Safari", "Different document")));
+
+    assert!(commands.is_empty());
+    assert!(matches!(guard.view(), GuardView::Guarding { .. }));
+}
+
+#[test]
+fn authorized_app_does_not_authorize_other_apps() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+
+    guard.observe_focus(Some(window("Safari", "Quarterly planning notes")));
+    guard.submit_pin("4821").unwrap();
+
+    let commands = guard.observe_focus(Some(window("Slack", "Messages")));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.app_name == "Slack"
+    ));
+    assert!(matches!(guard.view(), GuardView::Locked { .. }));
+}
+
+#[test]
+fn app_authorization_clears_when_guarding_stops() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+    guard.observe_focus(Some(window("Safari", "Quarterly planning notes")));
+    guard.submit_pin("4821").unwrap();
+
+    guard.stop_guarding();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+    let commands = guard.observe_focus(Some(window("Safari", "Quarterly planning notes")));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.app_name == "Safari"
+    ));
+}
+
+#[test]
 fn carries_focused_window_bounds_into_lock_state() {
     let mut guard = guard_with_pin();
     guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
@@ -100,6 +158,65 @@ fn carries_focused_window_bounds_into_lock_state() {
         panic!("expected locked view");
     };
     assert_eq!(focused.bounds.as_ref(), Some(&focused_bounds));
+}
+
+#[test]
+fn emits_lock_command_when_focus_changes_while_locked() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+
+    guard.observe_focus(Some(
+        window("Safari", "Quarterly planning notes").with_bounds(WindowBounds {
+            x: 96,
+            y: 88,
+            width: 680,
+            height: 420,
+        }),
+    ));
+
+    let slack_bounds = WindowBounds {
+        x: 820,
+        y: 110,
+        width: 720,
+        height: 512,
+    };
+    let commands = guard.observe_focus(Some(
+        window("Slack", "Messages").with_bounds(slack_bounds.clone()),
+    ));
+
+    let [GuardCommand::ShowLock { focused, .. }] = commands.as_slice() else {
+        panic!("expected one ShowLock command");
+    };
+    assert_eq!(focused.app_name, "Slack");
+    assert_eq!(focused.bounds.as_ref(), Some(&slack_bounds));
+
+    let GuardView::Locked { focused, .. } = guard.view() else {
+        panic!("expected locked view");
+    };
+    assert_eq!(focused.app_name, "Slack");
+    assert_eq!(focused.bounds.as_ref(), Some(&slack_bounds));
+}
+
+#[test]
+fn does_not_emit_duplicate_lock_command_for_same_locked_focus() {
+    let mut guard = guard_with_pin();
+    guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
+    guard.accept_stay().unwrap();
+
+    let safari = window("Safari", "Quarterly planning notes")
+        .with_window_id("safari-1")
+        .with_bounds(WindowBounds {
+            x: 96,
+            y: 88,
+            width: 680,
+            height: 420,
+        });
+    guard.observe_focus(Some(safari.clone()));
+
+    let commands = guard.observe_focus(Some(safari));
+
+    assert!(commands.is_empty());
 }
 
 #[test]
