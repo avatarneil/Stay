@@ -148,6 +148,38 @@ fn stops_guarding_when_protected_meeting_window_stops_matching_meeting() {
 }
 
 #[test]
+fn stops_guarding_when_native_meeting_app_moves_to_different_window() {
+    let mut guard = guard_with_pin();
+    let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+
+    let commands = guard.observe_focus(Some(
+        window("zoom.us", "Zoom Workplace").with_window_id("zoom-home"),
+    ));
+
+    assert!(matches!(commands.as_slice(), [GuardCommand::StopGuarding]));
+    assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
+fn stops_guarding_when_native_meeting_window_returns_to_app_home() {
+    let mut guard = guard_with_pin();
+    let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+
+    let commands = guard.observe_focus(Some(
+        window("zoom.us", "Zoom Workplace").with_window_id("zoom-meeting"),
+    ));
+
+    assert!(matches!(commands.as_slice(), [GuardCommand::StopGuarding]));
+    assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
 fn stops_locked_session_when_protected_meeting_window_stops_matching_meeting() {
     let mut guard = guard_with_pin();
     let meeting = window("Arc", "Design Review - Google Meet").with_window_id("arc-meet");
@@ -303,6 +335,17 @@ fn detects_google_meet_inside_browser_title() {
         .unwrap();
 
     assert_eq!(candidate.app, MeetingApp::GoogleMeet);
+}
+
+#[test]
+fn ignores_zoom_home_window_as_meeting() {
+    let classifier = MeetingClassifier::default();
+
+    assert!(
+        classifier
+            .classify(&window("zoom.us", "Zoom Workplace"))
+            .is_none()
+    );
 }
 
 #[test]

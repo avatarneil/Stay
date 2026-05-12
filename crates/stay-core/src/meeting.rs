@@ -108,6 +108,10 @@ impl MeetingClassifier {
             return None;
         };
 
+        if is_known_non_meeting_shell(&meeting_app, &title) {
+            return None;
+        }
+
         Some(MeetingCandidate {
             app: meeting_app,
             window: window.clone(),
@@ -152,11 +156,30 @@ impl MeetingClassifier {
         candidate: &MeetingCandidate,
         window: &WindowSnapshot,
     ) -> bool {
-        if self.is_stay_window(window) || !is_same_observed_window(&candidate.window, window) {
+        if self.is_stay_window(window) {
             return false;
         }
 
-        !matches!(self.classify(window), Some(current) if current.app == candidate.app)
+        let current_is_same_meeting_app =
+            matches!(self.classify(window), Some(current) if current.app == candidate.app);
+
+        if is_same_observed_window(&candidate.window, window) {
+            return !current_is_same_meeting_app;
+        }
+
+        if is_browser_app(&candidate.window.app_name) {
+            return false;
+        }
+
+        if candidate.window.app_name_normalized() != window.app_name_normalized() {
+            return false;
+        }
+
+        if has_distinct_window_ids(&candidate.window, window) {
+            return true;
+        }
+
+        !current_is_same_meeting_app
     }
 }
 
@@ -181,10 +204,23 @@ fn is_browser_app(app_name: &str) -> bool {
     .any(|browser| app.contains(browser))
 }
 
-fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
-    if left.window_id.is_none() || right.window_id.is_none() {
-        return false;
+fn is_known_non_meeting_shell(app: &MeetingApp, title: &str) -> bool {
+    match app {
+        MeetingApp::Zoom => text_contains(title, &["zoom workplace"]),
+        MeetingApp::MicrosoftTeams => title == "microsoft teams",
+        MeetingApp::Webex => title == "webex",
+        MeetingApp::SlackHuddle => !text_contains(title, &["huddle"]),
+        MeetingApp::FaceTime | MeetingApp::GoogleMeet => false,
     }
+}
 
-    left.window_id == right.window_id && left.app_name_normalized() == right.app_name_normalized()
+fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
+    left.window_id.is_some()
+        && right.window_id.is_some()
+        && left.window_id == right.window_id
+        && left.app_name_normalized() == right.app_name_normalized()
+}
+
+fn has_distinct_window_ids(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
+    left.window_id.is_some() && right.window_id.is_some() && left.window_id != right.window_id
 }
