@@ -328,6 +328,11 @@ impl FocusGuard {
         session: GuardSession,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
+        if self.classifier.has_meeting_ended(&session.meeting, &window) {
+            self.phase = GuardPhase::Idle;
+            return vec![GuardCommand::StopGuarding];
+        }
+
         if self
             .classifier
             .is_same_meeting_window(&session.meeting, &window)
@@ -359,6 +364,11 @@ impl FocusGuard {
         last_error: Option<String>,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
+        if self.classifier.has_meeting_ended(&session.meeting, &window) {
+            self.phase = GuardPhase::Idle;
+            return vec![GuardCommand::StopGuarding];
+        }
+
         if self
             .classifier
             .is_same_meeting_window(&session.meeting, &window)

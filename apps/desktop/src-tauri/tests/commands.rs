@@ -104,6 +104,31 @@ fn command_helpers_emit_lock_command_when_locked_focus_changes() {
 }
 
 #[test]
+fn command_helpers_emit_stop_guarding_when_meeting_ends() {
+    let state = AppState::default();
+
+    set_pin_inner(&state, "4821").unwrap();
+    observe_focus_inner(
+        &state,
+        Some(WindowSnapshot::new("Arc", "Design Review - Google Meet").with_window_id("arc-meet")),
+    )
+    .unwrap();
+    accept_stay_inner(&state).unwrap();
+
+    let response = observe_focus_inner(
+        &state,
+        Some(WindowSnapshot::new("Arc", "New Tab").with_window_id("arc-meet")),
+    )
+    .unwrap();
+
+    assert!(matches!(
+        response.commands.as_slice(),
+        [GuardCommand::StopGuarding]
+    ));
+    assert!(matches!(response.view, GuardView::Idle { .. }));
+}
+
+#[test]
 fn command_helpers_reject_pin_before_configuration() {
     let state = AppState::default();
     let error = set_pin_inner(&state, "48a1").unwrap_err();

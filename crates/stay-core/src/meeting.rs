@@ -146,6 +146,18 @@ impl MeetingClassifier {
 
         same_app && (same_title || same_process || !is_browser_app(&candidate.window.app_name))
     }
+
+    pub(crate) fn has_meeting_ended(
+        &self,
+        candidate: &MeetingCandidate,
+        window: &WindowSnapshot,
+    ) -> bool {
+        if self.is_stay_window(window) || !is_same_observed_window(&candidate.window, window) {
+            return false;
+        }
+
+        !matches!(self.classify(window), Some(current) if current.app == candidate.app)
+    }
 }
 
 fn text_contains(value: &str, needles: &[&str]) -> bool {
@@ -167,4 +179,12 @@ fn is_browser_app(app_name: &str) -> bool {
     ]
     .iter()
     .any(|browser| app.contains(browser))
+}
+
+fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
+    if left.window_id.is_none() || right.window_id.is_none() {
+        return false;
+    }
+
+    left.window_id == right.window_id && left.app_name_normalized() == right.app_name_normalized()
 }

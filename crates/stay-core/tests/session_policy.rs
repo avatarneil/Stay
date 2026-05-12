@@ -134,6 +134,54 @@ fn app_authorization_clears_when_guarding_stops() {
 }
 
 #[test]
+fn stops_guarding_when_protected_meeting_window_stops_matching_meeting() {
+    let mut guard = guard_with_pin();
+    let meeting = window("Arc", "Design Review - Google Meet").with_window_id("arc-meet");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+
+    let commands = guard.observe_focus(Some(window("Arc", "New Tab").with_window_id("arc-meet")));
+
+    assert!(matches!(commands.as_slice(), [GuardCommand::StopGuarding]));
+    assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
+fn stops_locked_session_when_protected_meeting_window_stops_matching_meeting() {
+    let mut guard = guard_with_pin();
+    let meeting = window("Arc", "Design Review - Google Meet").with_window_id("arc-meet");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+    guard.observe_focus(Some(window("Slack", "Messages")));
+
+    let commands = guard.observe_focus(Some(window("Arc", "New Tab").with_window_id("arc-meet")));
+
+    assert!(matches!(commands.as_slice(), [GuardCommand::StopGuarding]));
+    assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
+fn switching_to_another_browser_window_still_locks_guarded_meeting() {
+    let mut guard = guard_with_pin();
+    let meeting = window("Arc", "Design Review - Google Meet").with_window_id("arc-meet");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+
+    let commands = guard.observe_focus(Some(
+        window("Arc", "Project notes").with_window_id("arc-notes"),
+    ));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.title == "Project notes"
+    ));
+    assert!(matches!(guard.view(), GuardView::Locked { .. }));
+}
+
+#[test]
 fn carries_focused_window_bounds_into_lock_state() {
     let mut guard = guard_with_pin();
     guard.observe_focus(Some(window("zoom.us", "Weekly Team Sync")));
