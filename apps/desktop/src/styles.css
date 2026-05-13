@@ -1121,7 +1121,7 @@ label {
   width: min(360px, calc(100vw - 56px));
   text-align: center;
   transform: translateX(-50%);
-  animation: launch-copy 3200ms ease both;
+  animation: launch-copy var(--launch-duration) cubic-bezier(0.2, 0.7, 0.2, 1) both;
 }
 
 .launch-intro__copy p,
@@ -1789,21 +1789,25 @@ label {
 }
 
 @keyframes launch-copy {
-  0% {
+  0%,
+  54% {
     opacity: 0;
     transform: translateX(-50%) translateY(8px);
+    filter: blur(4px);
   }
 
-  18%,
-  54% {
+  64%,
+  86% {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+    filter: blur(0);
   }
 
-  66%,
+  96%,
   100% {
     opacity: 0;
     transform: translateX(-50%) translateY(-8px);
+    filter: blur(3px);
   }
 }
 
