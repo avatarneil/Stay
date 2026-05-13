@@ -148,6 +148,21 @@ fn stops_guarding_when_protected_meeting_window_stops_matching_meeting() {
 }
 
 #[test]
+fn hides_candidate_when_native_meeting_app_returns_home_before_acceptance() {
+    let mut guard = guard_with_pin();
+    let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
+
+    guard.observe_focus(Some(meeting));
+
+    let commands = guard.observe_focus(Some(
+        window("zoom.us", "Home").with_window_id("zoom-meeting"),
+    ));
+
+    assert!(matches!(commands.as_slice(), [GuardCommand::HidePrompt]));
+    assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
 fn stops_guarding_when_native_meeting_app_moves_to_different_window() {
     let mut guard = guard_with_pin();
     let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
@@ -341,11 +356,24 @@ fn detects_google_meet_inside_browser_title() {
 fn ignores_zoom_home_window_as_meeting() {
     let classifier = MeetingClassifier::default();
 
-    assert!(
-        classifier
-            .classify(&window("zoom.us", "Zoom Workplace"))
-            .is_none()
-    );
+    for title in [
+        "",
+        "Home",
+        "Zoom Workplace",
+        "Team Chat",
+        "Meetings",
+        "Calendar",
+        "Mail",
+        "Whiteboards",
+        "Clips",
+        "Contacts",
+        "Settings",
+    ] {
+        assert!(
+            classifier.classify(&window("zoom.us", title)).is_none(),
+            "expected Zoom shell title {title:?} to be ignored"
+        );
+    }
 }
 
 #[test]

@@ -128,11 +128,8 @@ impl MeetingClassifier {
             return false;
         }
 
-        if candidate.window.window_id.is_some()
-            && window.window_id.is_some()
-            && candidate.window.window_id == window.window_id
-        {
-            return true;
+        if is_same_observed_window(&candidate.window, window) {
+            return matches!(self.classify(window), Some(current) if current.app == candidate.app);
         }
 
         let Some(current_candidate) = self.classify(window) else {
@@ -205,13 +202,51 @@ fn is_browser_app(app_name: &str) -> bool {
 }
 
 fn is_known_non_meeting_shell(app: &MeetingApp, title: &str) -> bool {
-    match app {
-        MeetingApp::Zoom => text_contains(title, &["zoom workplace"]),
-        MeetingApp::MicrosoftTeams => title == "microsoft teams",
-        MeetingApp::Webex => title == "webex",
-        MeetingApp::SlackHuddle => !text_contains(title, &["huddle"]),
-        MeetingApp::FaceTime | MeetingApp::GoogleMeet => false,
+    if title.is_empty() {
+        return true;
     }
+
+    match app {
+        MeetingApp::Zoom => {
+            text_contains(title, &["zoom workplace"]) || title_matches(title, ZOOM_SHELL_TITLES)
+        }
+        MeetingApp::MicrosoftTeams => title_matches(title, TEAMS_SHELL_TITLES),
+        MeetingApp::Webex => title_matches(title, WEBEX_SHELL_TITLES),
+        MeetingApp::SlackHuddle => !text_contains(title, &["huddle"]),
+        MeetingApp::FaceTime => title_matches(title, FACETIME_SHELL_TITLES),
+        MeetingApp::GoogleMeet => false,
+    }
+}
+
+const ZOOM_SHELL_TITLES: &[&str] = &[
+    "home",
+    "team chat",
+    "meetings",
+    "calendar",
+    "mail",
+    "whiteboards",
+    "clips",
+    "contacts",
+    "settings",
+];
+
+const TEAMS_SHELL_TITLES: &[&str] = &[
+    "microsoft teams",
+    "teams",
+    "activity",
+    "chat",
+    "calendar",
+    "calls",
+    "files",
+    "apps",
+];
+
+const WEBEX_SHELL_TITLES: &[&str] = &["webex", "meetings", "messaging", "calling", "contacts"];
+
+const FACETIME_SHELL_TITLES: &[&str] = &["facetime"];
+
+fn title_matches(title: &str, needles: &[&str]) -> bool {
+    needles.iter().any(|needle| title == *needle)
 }
 
 fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {

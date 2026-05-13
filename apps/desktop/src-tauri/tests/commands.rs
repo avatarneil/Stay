@@ -129,6 +129,30 @@ fn command_helpers_emit_stop_guarding_when_meeting_ends() {
 }
 
 #[test]
+fn command_helpers_hide_prompt_when_native_meeting_app_returns_home_before_acceptance() {
+    let state = AppState::default();
+
+    set_pin_inner(&state, "4821").unwrap();
+    observe_focus_inner(
+        &state,
+        Some(WindowSnapshot::new("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting")),
+    )
+    .unwrap();
+
+    let response = observe_focus_inner(
+        &state,
+        Some(WindowSnapshot::new("zoom.us", "Home").with_window_id("zoom-meeting")),
+    )
+    .unwrap();
+
+    assert!(matches!(
+        response.commands.as_slice(),
+        [GuardCommand::HidePrompt]
+    ));
+    assert!(matches!(response.view, GuardView::Idle { .. }));
+}
+
+#[test]
 fn command_helpers_emit_stop_guarding_when_native_meeting_app_returns_home() {
     let state = AppState::default();
 
@@ -142,7 +166,7 @@ fn command_helpers_emit_stop_guarding_when_native_meeting_app_returns_home() {
 
     let response = observe_focus_inner(
         &state,
-        Some(WindowSnapshot::new("zoom.us", "Zoom Workplace").with_window_id("zoom-home")),
+        Some(WindowSnapshot::new("zoom.us", "Home").with_window_id("zoom-home")),
     )
     .unwrap();
 
