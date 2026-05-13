@@ -163,19 +163,53 @@ fn hides_candidate_when_native_meeting_app_returns_home_before_acceptance() {
 }
 
 #[test]
-fn stops_guarding_when_native_meeting_app_moves_to_different_window() {
+fn native_meeting_app_end_signal_requires_confirmation_on_different_window() {
     let mut guard = guard_with_pin();
     let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
+    let home = window("zoom.us", "Zoom Workplace").with_window_id("zoom-home");
 
     guard.observe_focus(Some(meeting));
     guard.accept_stay().unwrap();
 
-    let commands = guard.observe_focus(Some(
-        window("zoom.us", "Zoom Workplace").with_window_id("zoom-home"),
+    let commands = guard.observe_focus(Some(home.clone()));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.title == "Zoom Workplace"
     ));
+    assert!(matches!(guard.view(), GuardView::Locked { .. }));
+
+    let commands = guard.observe_focus(Some(home));
 
     assert!(matches!(commands.as_slice(), [GuardCommand::StopGuarding]));
     assert!(matches!(guard.view(), GuardView::Idle { .. }));
+}
+
+#[test]
+fn transient_native_meeting_app_end_signal_does_not_stop_guarding() {
+    let mut guard = guard_with_pin();
+    let meeting = window("zoom.us", "Weekly Team Sync").with_window_id("zoom-meeting");
+    let home = window("zoom.us", "Zoom Workplace").with_window_id("zoom-home");
+
+    guard.observe_focus(Some(meeting));
+    guard.accept_stay().unwrap();
+
+    guard.observe_focus(Some(home.clone()));
+    let commands = guard.observe_focus(Some(window("Slack", "Messages")));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.app_name == "Slack"
+    ));
+    assert!(matches!(guard.view(), GuardView::Locked { .. }));
+
+    let commands = guard.observe_focus(Some(home));
+
+    assert!(matches!(
+        commands.as_slice(),
+        [GuardCommand::ShowLock { focused, .. }] if focused.title == "Zoom Workplace"
+    ));
+    assert!(matches!(guard.view(), GuardView::Locked { .. }));
 }
 
 #[test]

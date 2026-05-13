@@ -172,6 +172,18 @@ fn command_helpers_emit_stop_guarding_when_native_meeting_app_returns_home() {
 
     assert!(matches!(
         response.commands.as_slice(),
+        [GuardCommand::ShowLock { .. }]
+    ));
+    assert!(matches!(response.view, GuardView::Locked { .. }));
+
+    let response = observe_focus_inner(
+        &state,
+        Some(WindowSnapshot::new("zoom.us", "Home").with_window_id("zoom-home")),
+    )
+    .unwrap();
+
+    assert!(matches!(
+        response.commands.as_slice(),
         [GuardCommand::StopGuarding]
     ));
     assert!(matches!(response.view, GuardView::Idle { .. }));

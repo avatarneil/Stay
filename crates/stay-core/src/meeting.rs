@@ -178,6 +178,15 @@ impl MeetingClassifier {
 
         !current_is_same_meeting_app
     }
+
+    pub(crate) fn has_definitive_meeting_end(
+        &self,
+        candidate: &MeetingCandidate,
+        window: &WindowSnapshot,
+    ) -> bool {
+        self.has_meeting_ended(candidate, window)
+            && is_same_observed_window(&candidate.window, window)
+    }
 }
 
 fn text_contains(value: &str, needles: &[&str]) -> bool {
