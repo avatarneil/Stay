@@ -12,11 +12,17 @@ describe("Stay GUI", () => {
     render(<App client={client} />);
 
     const pinInput = await screen.findByLabelText("Set a four digit PIN");
+    const keepButton = screen.getByRole("button", { name: "Keep" });
+
+    expect(keepButton).toBeDisabled();
+    expect(pinInput.closest(".pin-code-input")?.querySelectorAll(".pin-code-slot")).toHaveLength(4);
+
     await user.type(pinInput, "12a345");
 
     expect(pinInput).toHaveValue("1234");
+    expect(keepButton).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Keep" }));
+    await user.click(keepButton);
 
     expect(client.view()).toMatchObject({ mode: "idle", pin_configured: true });
     expect(screen.getByText("Stay is waiting.")).toBeInTheDocument();
@@ -70,8 +76,14 @@ describe("Stay GUI", () => {
     render(<App client={client} />);
 
     const unlockInput = await screen.findByLabelText("Unlock PIN");
+    const openButton = screen.getByRole("button", { name: "Open" });
+
+    expect(openButton).toBeDisabled();
+    expect(unlockInput.closest(".pin-code-input")?.querySelectorAll(".pin-code-slot")).toHaveLength(4);
+
     await user.type(unlockInput, "48x21");
     expect(unlockInput).toHaveValue("4821");
+    expect(openButton).toBeEnabled();
 
     await user.keyboard("{Enter}");
 
@@ -94,7 +106,7 @@ describe("Stay GUI", () => {
     expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
   });
 
-  it("shows only PIN setup when a meeting is focused before setup", async () => {
+  it("shows only PIN setup before setup and waits for a complete PIN", async () => {
     const user = userEvent.setup();
     const client = createMockStayClient();
     client.focusMeeting();
@@ -106,10 +118,15 @@ describe("Stay GUI", () => {
     expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Stay" })).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Set a four digit PIN"), "12");
-    await user.click(screen.getByRole("button", { name: "Keep" }));
+    const pinInput = screen.getByLabelText("Set a four digit PIN");
+    const keepButton = screen.getByRole("button", { name: "Keep" });
 
-    expect(await screen.findByText("PIN must be exactly four digits")).toBeInTheDocument();
+    await user.type(pinInput, "12");
+    expect(keepButton).toBeDisabled();
+    await user.click(keepButton);
+
+    expect(client.commandLog).not.toContain("set_pin");
+    expect(screen.queryByText("PIN must be exactly four digits")).not.toBeInTheDocument();
     expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
   });
 });

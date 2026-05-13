@@ -1,7 +1,8 @@
 import { FormEvent, useState } from "react";
 import type { GuardView } from "../types";
 import { windowLabel } from "../types";
-import { cleanPinInput } from "./pinInput";
+import { PinCodeInput } from "./PinCodeInput";
+import { isCompletePin } from "./pinInput";
 
 type LockedView = Extract<GuardView, { mode: "locked" }>;
 
@@ -17,6 +18,10 @@ export function LockScreen({ view, error, onSubmit }: LockScreenProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isCompletePin(pin)) {
+      return;
+    }
+
     const accepted = await onSubmit(pin);
     if (accepted) {
       setPin("");
@@ -32,19 +37,17 @@ export function LockScreen({ view, error, onSubmit }: LockScreenProps) {
         {view.focused.title ? `: ${windowLabel(view.focused)}` : ""}
       </p>
       <form className="unlock-form" noValidate onSubmit={handleSubmit}>
-        <div className="control-row">
-          <input
-            aria-label="Unlock PIN"
-            inputMode="numeric"
-            maxLength={4}
-            pattern="[0-9]{4}"
-            autoComplete="off"
+        <div className="control-row pin-entry-row">
+          <PinCodeInput
+            ariaLabel="Unlock PIN"
             value={pin}
-            aria-invalid={Boolean(visibleError)}
-            aria-describedby={visibleError ? "unlock-error" : undefined}
-            onChange={(event) => setPin(cleanPinInput(event.currentTarget.value))}
+            error={visibleError}
+            errorId="unlock-error"
+            onChange={setPin}
           />
-          <button type="submit">Open</button>
+          <button type="submit" disabled={!isCompletePin(pin)}>
+            Open
+          </button>
         </div>
       </form>
       <p id="unlock-error" className="error-line" role="status">
