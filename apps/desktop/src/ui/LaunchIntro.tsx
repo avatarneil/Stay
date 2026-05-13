@@ -41,55 +41,31 @@ type SignalMark = {
 type LaunchStyle = CSSProperties & Record<`--${string}`, string>;
 type SignalTemplate = Omit<SignalMark, "id">;
 
-const signalMarkTemplates: SignalTemplate[] = [
-  { kind: "bar", tone: "warm", width: 130, height: 10, x: "-49vw", y: "-42vh", driftX: "5vw", driftY: "3vh", delayMs: 0, durationMs: 2920 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "-35vw", y: "-42vh", driftX: "-2vw", driftY: "5vh", delayMs: 80, durationMs: 2840 },
-  { kind: "bar", tone: "neutral", width: 88, height: 9, x: "-19vw", y: "-40vh", driftX: "4vw", driftY: "4vh", delayMs: 160, durationMs: 3020 },
-  { kind: "dot", tone: "warm", width: 16, height: 16, x: "-3vw", y: "-43vh", driftX: "2vw", driftY: "6vh", delayMs: 240, durationMs: 2780 },
-  { kind: "bar", tone: "neutral", width: 112, height: 9, x: "14vw", y: "-41vh", driftX: "-5vw", driftY: "5vh", delayMs: 120, durationMs: 3120 },
-  { kind: "dot", tone: "neutral", width: 20, height: 20, x: "31vw", y: "-43vh", driftX: "-3vw", driftY: "6vh", delayMs: 280, durationMs: 2860 },
-  { kind: "bar", tone: "warm", width: 118, height: 10, x: "48vw", y: "-39vh", driftX: "-6vw", driftY: "4vh", delayMs: 40, durationMs: 3000 },
-  { kind: "dot", tone: "warm", width: 16, height: 16, x: "-46vw", y: "-29vh", driftX: "4vw", driftY: "2vh", delayMs: 300, durationMs: 2820 },
-  { kind: "bar", tone: "neutral", width: 104, height: 9, x: "-31vw", y: "-28vh", driftX: "3vw", driftY: "3vh", delayMs: 100, durationMs: 3180 },
-  { kind: "bar", tone: "warm", width: 92, height: 10, x: "-13vw", y: "-27vh", driftX: "-2vw", driftY: "5vh", delayMs: 340, durationMs: 2920 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "5vw", y: "-29vh", driftX: "1vw", driftY: "4vh", delayMs: 180, durationMs: 2740 },
-  { kind: "bar", tone: "neutral", width: 118, height: 9, x: "22vw", y: "-28vh", driftX: "-4vw", driftY: "3vh", delayMs: 420, durationMs: 3100 },
-  { kind: "bar", tone: "warm", width: 146, height: 10, x: "43vw", y: "-27vh", driftX: "-7vw", driftY: "2vh", delayMs: 220, durationMs: 3040 },
-  { kind: "bar", tone: "neutral", width: 116, height: 9, x: "-50vw", y: "-15vh", driftX: "7vw", driftY: "-1vh", delayMs: 460, durationMs: 3040 },
-  { kind: "dot", tone: "warm", width: 17, height: 17, x: "-37vw", y: "-16vh", driftX: "3vw", driftY: "2vh", delayMs: 260, durationMs: 2720 },
-  { kind: "bar", tone: "warm", width: 128, height: 10, x: "-20vw", y: "-14vh", driftX: "4vw", driftY: "1vh", delayMs: 520, durationMs: 3140 },
-  { kind: "dot", tone: "neutral", width: 16, height: 16, x: "-2vw", y: "-16vh", driftX: "-1vw", driftY: "3vh", delayMs: 360, durationMs: 2840 },
-  { kind: "bar", tone: "neutral", width: 92, height: 9, x: "16vw", y: "-15vh", driftX: "-3vw", driftY: "2vh", delayMs: 560, durationMs: 2960 },
-  { kind: "dot", tone: "warm", width: 18, height: 18, x: "34vw", y: "-16vh", driftX: "-4vw", driftY: "4vh", delayMs: 380, durationMs: 2780 },
-  { kind: "bar", tone: "neutral", width: 102, height: 9, x: "49vw", y: "-13vh", driftX: "-6vw", driftY: "2vh", delayMs: 620, durationMs: 3060 },
-  { kind: "dot", tone: "neutral", width: 16, height: 16, x: "-48vw", y: "-2vh", driftX: "6vw", driftY: "1vh", delayMs: 420, durationMs: 2820 },
-  { kind: "bar", tone: "warm", width: 108, height: 10, x: "-32vw", y: "-1vh", driftX: "4vw", driftY: "-2vh", delayMs: 680, durationMs: 3100 },
-  { kind: "dot", tone: "warm", width: 18, height: 18, x: "-14vw", y: "0vh", driftX: "2vw", driftY: "1vh", delayMs: 480, durationMs: 2860 },
-  { kind: "bar", tone: "neutral", width: 126, height: 9, x: "4vw", y: "-1vh", driftX: "-2vw", driftY: "1vh", delayMs: 740, durationMs: 3160 },
-  { kind: "dot", tone: "neutral", width: 15, height: 15, x: "21vw", y: "0vh", driftX: "-3vw", driftY: "-1vh", delayMs: 540, durationMs: 2920 },
-  { kind: "bar", tone: "warm", width: 116, height: 10, x: "37vw", y: "-1vh", driftX: "-5vw", driftY: "2vh", delayMs: 800, durationMs: 2980 },
-  { kind: "dot", tone: "warm", width: 16, height: 16, x: "49vw", y: "1vh", driftX: "-6vw", driftY: "1vh", delayMs: 600, durationMs: 2760 },
-  { kind: "bar", tone: "neutral", width: 134, height: 9, x: "-49vw", y: "13vh", driftX: "7vw", driftY: "-3vh", delayMs: 700, durationMs: 3100 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "-35vw", y: "12vh", driftX: "4vw", driftY: "-2vh", delayMs: 900, durationMs: 2760 },
-  { kind: "bar", tone: "warm", width: 112, height: 10, x: "-18vw", y: "14vh", driftX: "3vw", driftY: "-4vh", delayMs: 760, durationMs: 3040 },
-  { kind: "dot", tone: "warm", width: 16, height: 16, x: "0vw", y: "13vh", driftX: "1vw", driftY: "-3vh", delayMs: 960, durationMs: 2840 },
-  { kind: "bar", tone: "neutral", width: 94, height: 9, x: "17vw", y: "14vh", driftX: "-2vw", driftY: "-4vh", delayMs: 820, durationMs: 3180 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "34vw", y: "12vh", driftX: "-4vw", driftY: "-2vh", delayMs: 1020, durationMs: 2900 },
-  { kind: "bar", tone: "warm", width: 136, height: 10, x: "48vw", y: "14vh", driftX: "-7vw", driftY: "-3vh", delayMs: 880, durationMs: 3080 },
-  { kind: "dot", tone: "warm", width: 17, height: 17, x: "-46vw", y: "29vh", driftX: "5vw", driftY: "-4vh", delayMs: 980, durationMs: 2800 },
-  { kind: "bar", tone: "neutral", width: 120, height: 9, x: "-31vw", y: "29vh", driftX: "4vw", driftY: "-5vh", delayMs: 1120, durationMs: 3060 },
-  { kind: "dot", tone: "neutral", width: 16, height: 16, x: "-13vw", y: "30vh", driftX: "2vw", driftY: "-4vh", delayMs: 1040, durationMs: 2780 },
-  { kind: "bar", tone: "warm", width: 132, height: 10, x: "6vw", y: "29vh", driftX: "-2vw", driftY: "-5vh", delayMs: 1180, durationMs: 3160 },
-  { kind: "dot", tone: "warm", width: 18, height: 18, x: "24vw", y: "30vh", driftX: "-3vw", driftY: "-4vh", delayMs: 1080, durationMs: 2840 },
-  { kind: "bar", tone: "neutral", width: 102, height: 9, x: "40vw", y: "28vh", driftX: "-5vw", driftY: "-4vh", delayMs: 1240, durationMs: 3040 },
-  { kind: "dot", tone: "neutral", width: 16, height: 16, x: "50vw", y: "31vh", driftX: "-6vw", driftY: "-5vh", delayMs: 1160, durationMs: 2720 },
-  { kind: "bar", tone: "warm", width: 146, height: 10, x: "-48vw", y: "43vh", driftX: "6vw", driftY: "-6vh", delayMs: 1260, durationMs: 3000 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "-29vw", y: "42vh", driftX: "4vw", driftY: "-6vh", delayMs: 1320, durationMs: 2760 },
-  { kind: "bar", tone: "neutral", width: 118, height: 9, x: "-8vw", y: "42vh", driftX: "2vw", driftY: "-6vh", delayMs: 1200, durationMs: 3120 },
-  { kind: "dot", tone: "warm", width: 16, height: 16, x: "13vw", y: "43vh", driftX: "-2vw", driftY: "-6vh", delayMs: 1360, durationMs: 2820 },
-  { kind: "bar", tone: "warm", width: 126, height: 10, x: "31vw", y: "42vh", driftX: "-4vw", driftY: "-6vh", delayMs: 1280, durationMs: 3080 },
-  { kind: "dot", tone: "neutral", width: 18, height: 18, x: "48vw", y: "42vh", driftX: "-6vw", driftY: "-6vh", delayMs: 1420, durationMs: 2740 },
-];
+const signalRows = [-45, -35, -25, -15, -5, 5, 15, 25, 35, 45];
+const signalPhases = [0.08, 0.16, 0.24, 0.32, 0.4, 0.48, 0.56, 0.64, 0.72];
+
+const signalMarkTemplates: SignalTemplate[] = signalRows.flatMap((rowY, rowIndex) =>
+  signalPhases.map((phase, phaseIndex) => {
+    const seed = rowIndex * signalPhases.length + phaseIndex;
+    const isDot = seed % 4 === 0;
+    const tone: SignalMark["tone"] = seed % 11 === 0 ? "accent" : seed % 3 === 0 ? "warm" : "neutral";
+    const durationMs = 5200 + (seed % 6) * 240;
+    const rowOffset = ((phaseIndex % 3) - 1) * 1.4;
+
+    return {
+      kind: isDot ? "dot" : "bar",
+      tone,
+      width: isDot ? 10 + (seed % 5) * 2 : 76 + (seed % 7) * 18,
+      height: isDot ? 10 + (seed % 5) * 2 : 7 + (seed % 3),
+      x: `${-72 - (seed % 3) * 6}vw`,
+      y: `${rowY + rowOffset}vh`,
+      driftX: `${148 + (seed % 5) * 8}vw`,
+      driftY: `${((seed % 7) - 3) * 0.7}vh`,
+      delayMs: -Math.round((phase + (rowIndex % 3) * 0.018) * durationMs) + rowIndex * 22,
+      durationMs,
+    };
+  }),
+);
 
 const signalMarks: SignalMark[] = signalMarkTemplates.map((mark, index) => ({
   id: `signal-${index + 1}`,

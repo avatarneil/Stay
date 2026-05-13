@@ -933,11 +933,11 @@ label {
   background: rgba(226, 216, 202, 0.72);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.72) inset,
-    0 0 30px rgba(255, 255, 255, 0.34),
-    0 10px 24px rgba(52, 42, 32, 0.1);
+    0 0 24px rgba(255, 255, 255, 0.28),
+    0 8px 22px rgba(52, 42, 32, 0.08);
   opacity: 0;
   transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.52);
-  animation: launch-signal-pulse var(--signal-duration) cubic-bezier(0.16, 0.72, 0.2, 1) var(--signal-delay) both;
+  animation: launch-signal-pulse var(--signal-duration) linear var(--signal-delay) both;
   will-change: transform, opacity, filter;
 }
 
@@ -1605,12 +1605,12 @@ label {
 
 @keyframes launch-signals-out {
   0%,
-  52% {
+  62% {
     opacity: 1;
   }
 
-  76% {
-    opacity: 0.22;
+  86% {
+    opacity: 0.16;
   }
 
   100% {
@@ -1621,27 +1621,26 @@ label {
 @keyframes launch-signal-pulse {
   0% {
     opacity: 0;
-    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.56);
-    filter: blur(7px);
+    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.62);
+    filter: blur(8px);
   }
 
-  12% {
+  10% {
     opacity: 1;
     transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(1.08);
     filter: blur(0);
   }
 
-  36% {
-    opacity: 0.78;
-    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.96);
-    filter: blur(0.5px);
+  42% {
+    opacity: 0.86;
+    filter: blur(0);
   }
 
-  64% {
-    opacity: 0.2;
+  74% {
+    opacity: 0.16;
     transform: translate3d(calc(var(--signal-x) + var(--signal-drift-x)), calc(var(--signal-y) + var(--signal-drift-y)), 0)
       scale(0.82);
-    filter: blur(4px);
+    filter: blur(3px);
   }
 
   100% {
