@@ -8,22 +8,6 @@ type LaunchIntroProps = {
   onComplete: () => void;
 };
 
-type ChatterMark = {
-  id: string;
-  kind: "bar" | "dot";
-  tone: "neutral" | "warm" | "accent";
-  width: number;
-  height: number;
-  startX: string;
-  startY: string;
-  midX: string;
-  midY: string;
-  finalX: string;
-  finalY: string;
-  delayMs: number;
-  durationMs: number;
-};
-
 type SignalMark = {
   id: string;
   kind: "bar" | "dot";
@@ -38,30 +22,38 @@ type SignalMark = {
   durationMs: number;
 };
 
+type IconMark = {
+  id: string;
+  kind: "bar" | "dot";
+  tone: "neutral" | "warm";
+  placement: string;
+};
+
 type LaunchStyle = CSSProperties & Record<`--${string}`, string>;
 type SignalTemplate = Omit<SignalMark, "id">;
 
-const signalRows = [-45, -35, -25, -15, -5, 5, 15, 25, 35, 45];
-const signalPhases = [0.08, 0.16, 0.24, 0.32, 0.4, 0.48, 0.56, 0.64, 0.72];
+const signalRows = [5, 12.5, 20, 27.5, 35, 42.5, 50, 57.5, 65, 72.5, 80, 87.5, 95];
+const signalColumns = [-18, -6, 6, 18, 30, 42, 54, 66, 78, 90, 102, 114];
 
 const signalMarkTemplates: SignalTemplate[] = signalRows.flatMap((rowY, rowIndex) =>
-  signalPhases.map((phase, phaseIndex) => {
-    const seed = rowIndex * signalPhases.length + phaseIndex;
+  signalColumns.map((columnX, columnIndex) => {
+    const seed = rowIndex * signalColumns.length + columnIndex;
     const isDot = seed % 4 === 0;
     const tone: SignalMark["tone"] = seed % 11 === 0 ? "accent" : seed % 3 === 0 ? "warm" : "neutral";
-    const durationMs = 5200 + (seed % 6) * 240;
-    const rowOffset = ((phaseIndex % 3) - 1) * 1.4;
+    const durationMs = 3600 + (seed % 8) * 210;
+    const rowOffset = ((columnIndex % 3) - 1) * 1.8;
+    const columnOffset = ((rowIndex % 4) - 1.5) * 1.6;
 
     return {
       kind: isDot ? "dot" : "bar",
       tone,
-      width: isDot ? 10 + (seed % 5) * 2 : 76 + (seed % 7) * 18,
-      height: isDot ? 10 + (seed % 5) * 2 : 7 + (seed % 3),
-      x: `${-72 - (seed % 3) * 6}vw`,
+      width: isDot ? 6 + (seed % 5) * 2 : 34 + (seed % 8) * 10,
+      height: isDot ? 6 + (seed % 5) * 2 : 5 + (seed % 3),
+      x: `${columnX + columnOffset}vw`,
       y: `${rowY + rowOffset}vh`,
-      driftX: `${148 + (seed % 5) * 8}vw`,
-      driftY: `${((seed % 7) - 3) * 0.7}vh`,
-      delayMs: -Math.round((phase + (rowIndex % 3) * 0.018) * durationMs) + rowIndex * 22,
+      driftX: `${38 + (seed % 6) * 5}vw`,
+      driftY: `${((seed % 7) - 3) * 0.55}vh`,
+      delayMs: -Math.round(((columnIndex + 1) / signalColumns.length) * durationMs) + rowIndex * 34,
       durationMs,
     };
   }),
@@ -72,247 +64,22 @@ const signalMarks: SignalMark[] = signalMarkTemplates.map((mark, index) => ({
   ...mark,
 }));
 
-const chatterMarks: ChatterMark[] = [
-  {
-    id: "left-warm",
-    kind: "bar",
-    tone: "warm",
-    width: 114,
-    height: 14,
-    startX: "-43vw",
-    startY: "-26vh",
-    midX: "-23vw",
-    midY: "-14vh",
-    finalX: "-9.2rem",
-    finalY: "-5.1rem",
-    delayMs: 0,
-    durationMs: 5600,
-  },
-  {
-    id: "right-warm",
-    kind: "bar",
-    tone: "warm",
-    width: 174,
-    height: 15,
-    startX: "41vw",
-    startY: "-30vh",
-    midX: "23vw",
-    midY: "-18vh",
-    finalX: "7.1rem",
-    finalY: "-5.9rem",
-    delayMs: 120,
-    durationMs: 5480,
-  },
-  {
-    id: "lower-warm",
-    kind: "bar",
-    tone: "warm",
-    width: 128,
-    height: 14,
-    startX: "-35vw",
-    startY: "32vh",
-    midX: "-19vw",
-    midY: "18vh",
-    finalX: "-8.3rem",
-    finalY: "6.8rem",
-    delayMs: 180,
-    durationMs: 5380,
-  },
-  {
-    id: "bottom-warm",
-    kind: "bar",
-    tone: "warm",
-    width: 146,
-    height: 14,
-    startX: "34vw",
-    startY: "34vh",
-    midX: "18vw",
-    midY: "19vh",
-    finalX: "5.2rem",
-    finalY: "4.6rem",
-    delayMs: 80,
-    durationMs: 5520,
-  },
-  {
-    id: "top-neutral",
-    kind: "bar",
-    tone: "neutral",
-    width: 94,
-    height: 14,
-    startX: "-18vw",
-    startY: "-38vh",
-    midX: "-12vw",
-    midY: "-24vh",
-    finalX: "-5.2rem",
-    finalY: "-10.4rem",
-    delayMs: 40,
-    durationMs: 5560,
-  },
-  {
-    id: "top-right-neutral",
-    kind: "bar",
-    tone: "neutral",
-    width: 82,
-    height: 14,
-    startX: "26vw",
-    startY: "-41vh",
-    midX: "18vw",
-    midY: "-23vh",
-    finalX: "5.6rem",
-    finalY: "-10.4rem",
-    delayMs: 220,
-    durationMs: 5360,
-  },
-  {
-    id: "right-neutral-small",
-    kind: "bar",
-    tone: "neutral",
-    width: 74,
-    height: 12,
-    startX: "49vw",
-    startY: "-2vh",
-    midX: "28vw",
-    midY: "-4vh",
-    finalX: "10.7rem",
-    finalY: "-1.1rem",
-    delayMs: 260,
-    durationMs: 5220,
-  },
-  {
-    id: "left-neutral-small",
-    kind: "bar",
-    tone: "neutral",
-    width: 78,
-    height: 12,
-    startX: "-49vw",
-    startY: "7vh",
-    midX: "-27vw",
-    midY: "3vh",
-    finalX: "-10.8rem",
-    finalY: "-0.2rem",
-    delayMs: 320,
-    durationMs: 5160,
-  },
-  {
-    id: "left-low-neutral",
-    kind: "bar",
-    tone: "neutral",
-    width: 110,
-    height: 13,
-    startX: "-44vw",
-    startY: "22vh",
-    midX: "-26vw",
-    midY: "11vh",
-    finalX: "-8.6rem",
-    finalY: "3.8rem",
-    delayMs: 380,
-    durationMs: 5140,
-  },
-  {
-    id: "right-low-neutral",
-    kind: "bar",
-    tone: "neutral",
-    width: 82,
-    height: 13,
-    startX: "46vw",
-    startY: "25vh",
-    midX: "26vw",
-    midY: "13vh",
-    finalX: "10.2rem",
-    finalY: "3.2rem",
-    delayMs: 440,
-    durationMs: 5060,
-  },
-  {
-    id: "bottom-neutral",
-    kind: "bar",
-    tone: "neutral",
-    width: 164,
-    height: 13,
-    startX: "2vw",
-    startY: "44vh",
-    midX: "0vw",
-    midY: "25vh",
-    finalX: "1.2rem",
-    finalY: "9.1rem",
-    delayMs: 160,
-    durationMs: 5400,
-  },
-  {
-    id: "top-left-dot",
-    kind: "dot",
-    tone: "neutral",
-    width: 24,
-    height: 24,
-    startX: "-30vw",
-    startY: "-42vh",
-    midX: "-21vw",
-    midY: "-25vh",
-    finalX: "-10.4rem",
-    finalY: "-10.2rem",
-    delayMs: 140,
-    durationMs: 5460,
-  },
-  {
-    id: "top-dot",
-    kind: "dot",
-    tone: "neutral",
-    width: 28,
-    height: 28,
-    startX: "11vw",
-    startY: "-45vh",
-    midX: "8vw",
-    midY: "-27vh",
-    finalX: "1.9rem",
-    finalY: "-10.4rem",
-    delayMs: 220,
-    durationMs: 5280,
-  },
-  {
-    id: "middle-dot",
-    kind: "dot",
-    tone: "warm",
-    width: 22,
-    height: 22,
-    startX: "-8vw",
-    startY: "-18vh",
-    midX: "-7vw",
-    midY: "-11vh",
-    finalX: "-3.9rem",
-    finalY: "-5.1rem",
-    delayMs: 60,
-    durationMs: 5580,
-  },
-  {
-    id: "lower-dot",
-    kind: "dot",
-    tone: "neutral",
-    width: 22,
-    height: 22,
-    startX: "-14vw",
-    startY: "27vh",
-    midX: "-9vw",
-    midY: "17vh",
-    finalX: "-4.6rem",
-    finalY: "6.6rem",
-    delayMs: 300,
-    durationMs: 5160,
-  },
-  {
-    id: "right-dot",
-    kind: "dot",
-    tone: "warm",
-    width: 22,
-    height: 22,
-    startX: "43vw",
-    startY: "17vh",
-    midX: "27vw",
-    midY: "12vh",
-    finalX: "10.3rem",
-    finalY: "6.6rem",
-    delayMs: 100,
-    durationMs: 5500,
-  },
+const iconMarks: IconMark[] = [
+  { id: "top-left-dot", kind: "dot", tone: "neutral", placement: "top-left-dot" },
+  { id: "top-left-bar", kind: "bar", tone: "neutral", placement: "top-left-bar" },
+  { id: "top-center-dot", kind: "dot", tone: "neutral", placement: "top-center-dot" },
+  { id: "top-right-bar", kind: "bar", tone: "neutral", placement: "top-right-bar" },
+  { id: "upper-warm-left", kind: "bar", tone: "warm", placement: "upper-warm-left" },
+  { id: "upper-warm-dot", kind: "dot", tone: "warm", placement: "upper-warm-dot" },
+  { id: "upper-warm-right", kind: "bar", tone: "warm", placement: "upper-warm-right" },
+  { id: "mid-left-bar", kind: "bar", tone: "neutral", placement: "mid-left-bar" },
+  { id: "mid-right-bar", kind: "bar", tone: "neutral", placement: "mid-right-bar" },
+  { id: "lower-left-bar", kind: "bar", tone: "neutral", placement: "lower-left-bar" },
+  { id: "lower-left-dot", kind: "dot", tone: "neutral", placement: "lower-left-dot" },
+  { id: "lower-right-warm", kind: "bar", tone: "warm", placement: "lower-right-warm" },
+  { id: "lower-right-dot", kind: "dot", tone: "warm", placement: "lower-right-dot" },
+  { id: "bottom-left-warm", kind: "bar", tone: "warm", placement: "bottom-left-warm" },
+  { id: "bottom-neutral", kind: "bar", tone: "neutral", placement: "bottom-neutral" },
 ];
 
 export function LaunchIntro({ onComplete }: LaunchIntroProps) {
@@ -347,17 +114,16 @@ export function LaunchIntro({ onComplete }: LaunchIntroProps) {
       </div>
       <div className="launch-intro__icon-stage" aria-hidden="true">
         <div className="launch-intro__tile" />
-        <div className="launch-intro__chatter">
-          {chatterMarks.map((mark) => (
+        <div className="launch-intro__icon-pattern">
+          {iconMarks.map((mark) => (
             <span
               key={mark.id}
               className={[
-                "launch-intro__beep",
-                "launch-intro__mark",
-                `launch-intro__mark-${mark.kind}`,
-                `launch-intro__mark-${mark.tone}`,
+                "launch-intro__icon-mark",
+                `launch-intro__icon-mark-${mark.kind}`,
+                `launch-intro__icon-mark-${mark.tone}`,
+                `launch-intro__icon-mark--${mark.placement}`,
               ].join(" ")}
-              style={markStyle(mark)}
             />
           ))}
         </div>
@@ -381,21 +147,6 @@ export function LaunchIntro({ onComplete }: LaunchIntroProps) {
 function durationStyle(durationMs: number): LaunchStyle {
   return {
     "--launch-duration": `${durationMs}ms`,
-  };
-}
-
-function markStyle(mark: ChatterMark): LaunchStyle {
-  return {
-    "--mark-width": `${mark.width}px`,
-    "--mark-height": `${mark.height}px`,
-    "--mark-start-x": mark.startX,
-    "--mark-start-y": mark.startY,
-    "--mark-mid-x": mark.midX,
-    "--mark-mid-y": mark.midY,
-    "--mark-final-x": mark.finalX,
-    "--mark-final-y": mark.finalY,
-    "--mark-delay": `${mark.delayMs}ms`,
-    "--mark-duration": `${mark.durationMs}ms`,
   };
 }
 
@@ -434,8 +185,8 @@ function playLaunchSound(): (() => void) | undefined {
   const cleanupNodes: AudioScheduledSourceNode[] = [];
 
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.28, now + 0.28);
-  master.gain.exponentialRampToValueAtTime(0.17, now + 3.8);
+  master.gain.exponentialRampToValueAtTime(0.95, now + 0.28);
+  master.gain.exponentialRampToValueAtTime(0.58, now + 3.8);
   master.gain.exponentialRampToValueAtTime(0.0001, now + 7.2);
 
   lowpass.type = "lowpass";
@@ -489,8 +240,8 @@ function scheduleRoomTone(
   bandpass.frequency.exponentialRampToValueAtTime(260, now + 3.8);
   bandpass.Q.setValueAtTime(0.9, now);
 
-  noiseGain.gain.setValueAtTime(0.052, now);
-  noiseGain.gain.exponentialRampToValueAtTime(0.007, now + 4.8);
+  noiseGain.gain.setValueAtTime(0.064, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.009, now + 4.8);
 
   noise.connect(bandpass);
   bandpass.connect(noiseGain);
@@ -519,7 +270,7 @@ function scheduleChatterPulses(
     oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.72, start + 0.16);
 
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.068 - index * 0.0028, start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.088 - index * 0.0035, start + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
 
     oscillator.connect(gain);
@@ -548,7 +299,7 @@ function scheduleQuietChord(
     oscillator.detune.setValueAtTime(index === 1 ? 4 : -3, start);
 
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(index === 1 ? 0.076 : 0.048, start + 1.2);
+    gain.gain.exponentialRampToValueAtTime(index === 1 ? 0.096 : 0.06, start + 1.2);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 7.1);
 
     oscillator.connect(gain);
