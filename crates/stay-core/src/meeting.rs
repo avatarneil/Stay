@@ -255,7 +255,7 @@ const WEBEX_SHELL_TITLES: &[&str] = &["webex", "meetings", "messaging", "calling
 const FACETIME_SHELL_TITLES: &[&str] = &["facetime"];
 
 fn title_matches(title: &str, needles: &[&str]) -> bool {
-    needles.iter().any(|needle| title == *needle)
+    needles.contains(&title)
 }
 
 fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
