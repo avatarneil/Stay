@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createMockStayClient } from "./mockStayClient";
 
@@ -142,5 +142,17 @@ describe("Stay GUI", () => {
     await user.click(screen.getByRole("button", { name: "Skip" }));
 
     expect(screen.queryByLabelText("Stay opening animation")).not.toBeInTheDocument();
+  });
+
+  it("can force the first-launch intro in dev with an env flag", async () => {
+    vi.stubEnv("VITE_STAY_FORCE_LAUNCH_INTRO", "1");
+
+    try {
+      render(<App client={createMockStayClient()} />);
+
+      expect(await screen.findByLabelText("Stay opening animation")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });

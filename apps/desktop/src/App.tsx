@@ -12,6 +12,7 @@ import { StatusShell } from "./ui/StatusShell";
 
 const launchIntroStorageKey = "stay.launchIntro.v1.seen";
 const launchIntroPreviewParam = "launchIntro";
+const forceLaunchIntroEnv = "1";
 
 const idleView: GuardView = {
   mode: "idle",
@@ -197,6 +198,10 @@ function statusForView(view: GuardView, isLoading: boolean): string {
 }
 
 function shouldShowLaunchIntro(): boolean {
+  if (isLaunchIntroForced()) {
+    return true;
+  }
+
   if (new URLSearchParams(window.location.search).get(launchIntroPreviewParam) === "1") {
     return true;
   }
@@ -206,6 +211,10 @@ function shouldShowLaunchIntro(): boolean {
   } catch {
     return true;
   }
+}
+
+function isLaunchIntroForced(): boolean {
+  return import.meta.env.DEV && import.meta.env.VITE_STAY_FORCE_LAUNCH_INTRO === forceLaunchIntroEnv;
 }
 
 function markLaunchIntroSeen(): void {
