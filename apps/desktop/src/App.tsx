@@ -1,12 +1,18 @@
-import { useEffect, useMemo, useState } from "react";
+import { invoke, isTauri } from "@tauri-apps/api/core";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CommandResponse, GuardView } from "./types";
 import type { StayClient } from "./stayClient";
 import { errorMessage } from "./stayClient";
 import { GuardingStatus } from "./ui/GuardingStatus";
+import { LaunchIntro } from "./ui/LaunchIntro";
 import { LockScreen } from "./ui/LockScreen";
 import { MeetingPrompt } from "./ui/MeetingPrompt";
 import { PinSetup } from "./ui/PinSetup";
 import { StatusShell } from "./ui/StatusShell";
+
+const launchIntroStorageKey = "stay.launchIntro.v1.seen";
+const launchIntroPreviewParam = "launchIntro";
+const forceLaunchIntroEnv = "1";
 
 const idleView: GuardView = {
   mode: "idle",
@@ -15,6 +21,7 @@ const idleView: GuardView = {
 
 type AppProps = {
   client: StayClient;
+  showLaunchIntro?: boolean;
 };
 
 type ActionError = {
@@ -22,10 +29,13 @@ type ActionError = {
   message: string;
 };
 
-export function App({ client }: AppProps) {
+export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppProps) {
   const [view, setView] = useState<GuardView>(idleView);
   const [isLoading, setIsLoading] = useState(true);
   const [actionError, setActionError] = useState<ActionError | null>(null);
+  const [showLaunchIntro, setShowLaunchIntro] = useState(() =>
+    showLaunchIntroOverride ?? shouldShowLaunchIntro(),
+  );
 
   useEffect(() => {
     let isMounted = true;
@@ -73,6 +83,18 @@ export function App({ client }: AppProps) {
     };
   }, [client]);
 
+  useEffect(() => {
+    if (!showLaunchIntro) {
+      return;
+    }
+
+    void setLaunchAnimationActive(true);
+
+    return () => {
+      void setLaunchAnimationActive(false);
+    };
+  }, [showLaunchIntro]);
+
   const status = useMemo(() => statusForView(view, isLoading), [isLoading, view]);
 
   async function runCommand(
@@ -92,55 +114,65 @@ export function App({ client }: AppProps) {
 
   const setupError = actionError?.target === "setup" ? actionError.message : null;
   const modeError = actionError?.target === "mode" ? actionError.message : null;
+  const completeLaunchIntro = useCallback(() => {
+    markLaunchIntroSeen();
+    setShowLaunchIntro(false);
+  }, []);
 
   return (
-    <StatusShell mode={view.mode} status={status}>
-      {isLoading ? (
-        <section className="mode-panel quiet-state">
-          <p className="kicker">Opening</p>
-          <h2>Stay is opening.</h2>
-        </section>
-      ) : null}
+    <>
+      <StatusShell mode={view.mode} status={status}>
+        {isLoading ? (
+          <section className="mode-panel quiet-state">
+            <p className="kicker">Opening</p>
+            <h2>Stay is opening.</h2>
+          </section>
+        ) : null}
 
-      {!isLoading && !view.pin_configured ? (
-        <PinSetup error={setupError} onSave={(pin) => runCommand(() => client.setPin(pin), "setup")} />
-      ) : null}
+        {!isLoading && !view.pin_configured ? (
+          <PinSetup error={setupError} onSave={(pin) => runCommand(() => client.setPin(pin), "setup")} />
+        ) : null}
 
-      {!isLoading && view.mode === "idle" && view.pin_configured ? (
-        <section className="mode-panel quiet-state">
-          <p className="kicker">Ready</p>
-          <h2>Stay is waiting.</h2>
-        </section>
-      ) : null}
+        {!isLoading && view.mode === "idle" && view.pin_configured ? (
+          <section className="mode-panel quiet-state">
+            <p className="kicker">Ready</p>
+            <h2>Stay is waiting.</h2>
+          </section>
+        ) : null}
 
-      {!isLoading && view.mode === "meeting_candidate" ? (
-        <MeetingPrompt
-          candidate={view.candidate}
-          canAccept={view.pin_configured}
-          error={modeError}
-          onAccept={() => {
-            void runCommand(() => client.acceptStay());
-          }}
-          onDismiss={() => {
-            void runCommand(() => client.dismissCandidate());
-          }}
-        />
-      ) : null}
+        {!isLoading && view.mode === "meeting_candidate" ? (
+          <MeetingPrompt
+            candidate={view.candidate}
+            canAccept={view.pin_configured}
+            error={modeError}
+            onAccept={() => {
+              void runCommand(() => client.acceptStay());
+            }}
+            onDismiss={() => {
+              void runCommand(() => client.dismissCandidate());
+            }}
+          />
+        ) : null}
 
-      {!isLoading && view.mode === "guarding" ? (
-        <GuardingStatus
-          meeting={view.meeting}
-          error={modeError}
-          onStop={() => {
-            void runCommand(() => client.stopGuarding());
-          }}
-        />
-      ) : null}
+        {!isLoading && view.mode === "guarding" ? (
+          <GuardingStatus
+            meeting={view.meeting}
+            error={modeError}
+            onStop={() => {
+              void runCommand(() => client.stopGuarding());
+            }}
+          />
+        ) : null}
 
-      {!isLoading && view.mode === "locked" ? (
-        <LockScreen view={view} error={modeError} onSubmit={(pin) => runCommand(() => client.submitPin(pin))} />
+        {!isLoading && view.mode === "locked" ? (
+          <LockScreen view={view} error={modeError} onSubmit={(pin) => runCommand(() => client.submitPin(pin))} />
+        ) : null}
+      </StatusShell>
+
+      {showLaunchIntro ? (
+        <LaunchIntro onComplete={completeLaunchIntro} />
       ) : null}
-    </StatusShell>
+    </>
   );
 }
 
@@ -162,5 +194,45 @@ function statusForView(view: GuardView, isLoading: boolean): string {
       return "On";
     case "locked":
       return "Locked";
+  }
+}
+
+function shouldShowLaunchIntro(): boolean {
+  if (isLaunchIntroForced()) {
+    return true;
+  }
+
+  if (new URLSearchParams(window.location.search).get(launchIntroPreviewParam) === "1") {
+    return true;
+  }
+
+  try {
+    return window.localStorage.getItem(launchIntroStorageKey) !== "true";
+  } catch {
+    return true;
+  }
+}
+
+function isLaunchIntroForced(): boolean {
+  return import.meta.env.DEV && import.meta.env.VITE_STAY_FORCE_LAUNCH_INTRO === forceLaunchIntroEnv;
+}
+
+function markLaunchIntroSeen(): void {
+  try {
+    window.localStorage.setItem(launchIntroStorageKey, "true");
+  } catch {
+    // Storage can be unavailable in locked-down webviews; the intro still finishes for this session.
+  }
+}
+
+async function setLaunchAnimationActive(active: boolean): Promise<void> {
+  if (!isTauri()) {
+    return;
+  }
+
+  try {
+    await invoke("set_launch_animation_active", { active });
+  } catch {
+    // The visual animation is still usable if the native window resize is unavailable.
   }
 }
