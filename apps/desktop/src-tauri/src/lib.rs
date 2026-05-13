@@ -250,7 +250,7 @@ pub fn run() {
             if let Some(window) = app.get_webview_window("main") {
                 let state = app.state::<AppState>();
                 if current_state_inner(&state).is_ok_and(|view| should_hide_main_window(&view)) {
-                    let _ = window.hide();
+                    let _ = hide_main_window(&window);
                 } else {
                     let _ = position_top_right(&window);
                 }
@@ -299,8 +299,7 @@ fn position_top_right(window: &WebviewWindow) -> tauri::Result<()> {
     let geometry = compact_window_geometry(*monitor.position(), *monitor.size());
     window.set_size(tauri::Size::Physical(geometry.size))?;
     window.set_position(tauri::Position::Physical(geometry.position))?;
-    window.show()?;
-    Ok(())
+    show_main_window(window, true)
 }
 
 fn position_guarding_handle(window: &WebviewWindow) -> tauri::Result<()> {
@@ -311,8 +310,7 @@ fn position_guarding_handle(window: &WebviewWindow) -> tauri::Result<()> {
     let geometry = guarding_handle_geometry(*monitor.position(), *monitor.size());
     window.set_size(tauri::Size::Physical(geometry.size))?;
     window.set_position(tauri::Position::Physical(geometry.position))?;
-    window.show()?;
-    Ok(())
+    show_main_window(window, false)
 }
 
 fn compact_window_geometry(
@@ -402,7 +400,24 @@ fn position_monitor_overlay(window: &WebviewWindow) -> tauri::Result<()> {
         width: monitor_size.width,
         height: monitor_size.height,
     }))?;
+    show_main_window(window, true)
+}
+
+fn show_main_window(window: &WebviewWindow, focus: bool) -> tauri::Result<()> {
+    #[cfg(target_os = "macos")]
+    window.app_handle().show()?;
+    window.set_always_on_top(true)?;
     window.show()?;
+    if focus {
+        window.set_focus()?;
+    }
+    Ok(())
+}
+
+fn hide_main_window(window: &WebviewWindow) -> tauri::Result<()> {
+    window.hide()?;
+    #[cfg(target_os = "macos")]
+    window.app_handle().hide()?;
     Ok(())
 }
 
@@ -454,7 +469,7 @@ fn apply_window_commands(
     }) {
         hide_guard_border(window.app_handle())?;
         if should_hide_main_window(view) {
-            window.hide()?;
+            hide_main_window(window)?;
         } else {
             position_top_right(window)?;
         }
@@ -463,7 +478,7 @@ fn apply_window_commands(
 
     if should_hide_main_window(view) {
         hide_guard_border(window.app_handle())?;
-        window.hide()?;
+        hide_main_window(window)?;
     }
 
     Ok(())
@@ -540,8 +555,7 @@ fn position_focused_window_overlay(
         }
     };
 
-    window.show()?;
-    Ok(())
+    show_main_window(window, true)
 }
 
 fn focused_overlay_geometry(focused: &LockedFocus) -> Option<OverlayGeometry> {
