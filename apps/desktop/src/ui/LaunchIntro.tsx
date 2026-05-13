@@ -112,8 +112,8 @@ const signalMarks: SignalMark[] = [
     tone: "accent",
     width: 68,
     height: 9,
-    x: "-7vw",
-    y: "-31vh",
+    x: "-28vw",
+    y: "-34vh",
     driftX: "4vw",
     driftY: "4vh",
     delayMs: 820,
@@ -164,8 +164,8 @@ const signalMarks: SignalMark[] = [
     tone: "neutral",
     width: 84,
     height: 9,
-    x: "-16vw",
-    y: "-5vh",
+    x: "-46vw",
+    y: "-27vh",
     driftX: "5vw",
     driftY: "2vh",
     delayMs: 1520,
@@ -177,8 +177,8 @@ const signalMarks: SignalMark[] = [
     tone: "warm",
     width: 18,
     height: 18,
-    x: "0vw",
-    y: "12vh",
+    x: "45vw",
+    y: "-24vh",
     driftX: "2vw",
     driftY: "-5vh",
     delayMs: 1780,
@@ -196,6 +196,136 @@ const signalMarks: SignalMark[] = [
     driftY: "5vh",
     delayMs: 2060,
     durationMs: 1360,
+  },
+  {
+    id: "signal-13",
+    kind: "dot",
+    tone: "accent",
+    width: 16,
+    height: 16,
+    x: "-47vw",
+    y: "-36vh",
+    driftX: "5vw",
+    driftY: "3vh",
+    delayMs: 40,
+    durationMs: 1040,
+  },
+  {
+    id: "signal-14",
+    kind: "bar",
+    tone: "neutral",
+    width: 118,
+    height: 9,
+    x: "48vw",
+    y: "-30vh",
+    driftX: "-7vw",
+    driftY: "2vh",
+    delayMs: 120,
+    durationMs: 1260,
+  },
+  {
+    id: "signal-15",
+    kind: "dot",
+    tone: "warm",
+    width: 18,
+    height: 18,
+    x: "-48vw",
+    y: "35vh",
+    driftX: "6vw",
+    driftY: "-3vh",
+    delayMs: 260,
+    durationMs: 1120,
+  },
+  {
+    id: "signal-16",
+    kind: "bar",
+    tone: "accent",
+    width: 104,
+    height: 10,
+    x: "46vw",
+    y: "34vh",
+    driftX: "-5vw",
+    driftY: "-4vh",
+    delayMs: 340,
+    durationMs: 1380,
+  },
+  {
+    id: "signal-17",
+    kind: "bar",
+    tone: "warm",
+    width: 86,
+    height: 9,
+    x: "-4vw",
+    y: "-43vh",
+    driftX: "-3vw",
+    driftY: "5vh",
+    delayMs: 460,
+    durationMs: 1180,
+  },
+  {
+    id: "signal-18",
+    kind: "dot",
+    tone: "accent",
+    width: 16,
+    height: 16,
+    x: "8vw",
+    y: "42vh",
+    driftX: "4vw",
+    driftY: "-6vh",
+    delayMs: 620,
+    durationMs: 1080,
+  },
+  {
+    id: "signal-19",
+    kind: "bar",
+    tone: "neutral",
+    width: 96,
+    height: 9,
+    x: "-44vw",
+    y: "15vh",
+    driftX: "7vw",
+    driftY: "-1vh",
+    delayMs: 760,
+    durationMs: 1320,
+  },
+  {
+    id: "signal-20",
+    kind: "dot",
+    tone: "neutral",
+    width: 14,
+    height: 14,
+    x: "48vw",
+    y: "7vh",
+    driftX: "-6vw",
+    driftY: "2vh",
+    delayMs: 920,
+    durationMs: 1120,
+  },
+  {
+    id: "signal-21",
+    kind: "bar",
+    tone: "warm",
+    width: 126,
+    height: 10,
+    x: "-33vw",
+    y: "-40vh",
+    driftX: "4vw",
+    driftY: "5vh",
+    delayMs: 1080,
+    durationMs: 1480,
+  },
+  {
+    id: "signal-22",
+    kind: "dot",
+    tone: "warm",
+    width: 18,
+    height: 18,
+    x: "30vw",
+    y: "39vh",
+    driftX: "-3vw",
+    driftY: "-6vh",
+    delayMs: 1240,
+    durationMs: 1160,
   },
 ];
 
@@ -561,8 +691,8 @@ function playLaunchSound(): (() => void) | undefined {
   const cleanupNodes: AudioScheduledSourceNode[] = [];
 
   master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.18, now + 0.28);
-  master.gain.exponentialRampToValueAtTime(0.11, now + 3.8);
+  master.gain.exponentialRampToValueAtTime(0.28, now + 0.28);
+  master.gain.exponentialRampToValueAtTime(0.17, now + 3.8);
   master.gain.exponentialRampToValueAtTime(0.0001, now + 7.2);
 
   lowpass.type = "lowpass";
@@ -616,8 +746,8 @@ function scheduleRoomTone(
   bandpass.frequency.exponentialRampToValueAtTime(260, now + 3.8);
   bandpass.Q.setValueAtTime(0.9, now);
 
-  noiseGain.gain.setValueAtTime(0.035, now);
-  noiseGain.gain.exponentialRampToValueAtTime(0.004, now + 4.8);
+  noiseGain.gain.setValueAtTime(0.052, now);
+  noiseGain.gain.exponentialRampToValueAtTime(0.007, now + 4.8);
 
   noise.connect(bandpass);
   bandpass.connect(noiseGain);
@@ -646,7 +776,7 @@ function scheduleChatterPulses(
     oscillator.frequency.exponentialRampToValueAtTime(frequency * 0.72, start + 0.16);
 
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(0.045 - index * 0.0025, start + 0.03);
+    gain.gain.exponentialRampToValueAtTime(0.068 - index * 0.0028, start + 0.03);
     gain.gain.exponentialRampToValueAtTime(0.0001, start + 0.24);
 
     oscillator.connect(gain);
@@ -675,7 +805,7 @@ function scheduleQuietChord(
     oscillator.detune.setValueAtTime(index === 1 ? 4 : -3, start);
 
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.exponentialRampToValueAtTime(index === 1 ? 0.052 : 0.032, start + 1.2);
+    gain.gain.exponentialRampToValueAtTime(index === 1 ? 0.076 : 0.048, start + 1.2);
     gain.gain.exponentialRampToValueAtTime(0.0001, now + 7.1);
 
     oscillator.connect(gain);

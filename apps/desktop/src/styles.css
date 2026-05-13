@@ -930,14 +930,15 @@ label {
   margin-top: calc(var(--signal-height) / -2);
   border: 1px solid rgba(255, 255, 255, 0.54);
   border-radius: 999px;
-  background: rgba(226, 216, 202, 0.6);
+  background: rgba(226, 216, 202, 0.72);
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.72) inset,
-    0 0 22px rgba(255, 255, 255, 0.26),
-    0 8px 18px rgba(52, 42, 32, 0.08);
+    0 0 30px rgba(255, 255, 255, 0.34),
+    0 10px 24px rgba(52, 42, 32, 0.1);
   opacity: 0;
   transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.52);
   animation: launch-signal-pulse var(--signal-duration) cubic-bezier(0.16, 0.72, 0.2, 1) var(--signal-delay) both;
+  will-change: transform, opacity, filter;
 }
 
 .launch-intro__signal-dot {
@@ -1605,11 +1606,11 @@ label {
 
 @keyframes launch-signals-out {
   0%,
-  58% {
+  64% {
     opacity: 1;
   }
 
-  76%,
+  84%,
   100% {
     opacity: 0;
   }
@@ -1623,19 +1624,19 @@ label {
   }
 
   18% {
-    opacity: 0.94;
-    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(1);
+    opacity: 1;
+    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(1.08);
     filter: blur(0);
   }
 
   38% {
-    opacity: 0.14;
+    opacity: 0.24;
     transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.68);
     filter: blur(4px);
   }
 
   58% {
-    opacity: 0.84;
+    opacity: 0.96;
     transform: translate3d(calc(var(--signal-x) + var(--signal-drift-x)), calc(var(--signal-y) + var(--signal-drift-y)), 0)
       scale(0.92);
     filter: blur(0);
