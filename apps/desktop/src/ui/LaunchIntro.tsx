@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from "react";
 import type { CSSProperties } from "react";
-import stayIconUrl from "../../src-tauri/icons/icon.png";
 
 const defaultDurationMs = 7600;
 const reducedMotionDurationMs = 1200;
@@ -25,21 +24,194 @@ type ChatterMark = {
   durationMs: number;
 };
 
+type SignalMark = {
+  id: string;
+  kind: "bar" | "dot";
+  tone: "neutral" | "warm" | "accent";
+  width: number;
+  height: number;
+  x: string;
+  y: string;
+  driftX: string;
+  driftY: string;
+  delayMs: number;
+  durationMs: number;
+};
+
 type LaunchStyle = CSSProperties & Record<`--${string}`, string>;
+
+const signalMarks: SignalMark[] = [
+  {
+    id: "signal-1",
+    kind: "dot",
+    tone: "accent",
+    width: 18,
+    height: 18,
+    x: "18vw",
+    y: "-24vh",
+    driftX: "3vw",
+    driftY: "-2vh",
+    delayMs: 80,
+    durationMs: 1280,
+  },
+  {
+    id: "signal-2",
+    kind: "bar",
+    tone: "warm",
+    width: 96,
+    height: 10,
+    x: "-34vw",
+    y: "-16vh",
+    driftX: "6vw",
+    driftY: "-1vh",
+    delayMs: 220,
+    durationMs: 1420,
+  },
+  {
+    id: "signal-3",
+    kind: "dot",
+    tone: "warm",
+    width: 16,
+    height: 16,
+    x: "35vw",
+    y: "-4vh",
+    driftX: "-4vw",
+    driftY: "3vh",
+    delayMs: 420,
+    durationMs: 1180,
+  },
+  {
+    id: "signal-4",
+    kind: "bar",
+    tone: "neutral",
+    width: 74,
+    height: 9,
+    x: "24vw",
+    y: "22vh",
+    driftX: "-5vw",
+    driftY: "2vh",
+    delayMs: 520,
+    durationMs: 1380,
+  },
+  {
+    id: "signal-5",
+    kind: "dot",
+    tone: "neutral",
+    width: 14,
+    height: 14,
+    x: "-22vw",
+    y: "27vh",
+    driftX: "-3vw",
+    driftY: "-4vh",
+    delayMs: 680,
+    durationMs: 1240,
+  },
+  {
+    id: "signal-6",
+    kind: "bar",
+    tone: "accent",
+    width: 68,
+    height: 9,
+    x: "-7vw",
+    y: "-31vh",
+    driftX: "4vw",
+    driftY: "4vh",
+    delayMs: 820,
+    durationMs: 1320,
+  },
+  {
+    id: "signal-7",
+    kind: "dot",
+    tone: "accent",
+    width: 18,
+    height: 18,
+    x: "-39vw",
+    y: "4vh",
+    driftX: "4vw",
+    driftY: "1vh",
+    delayMs: 980,
+    durationMs: 1180,
+  },
+  {
+    id: "signal-8",
+    kind: "bar",
+    tone: "warm",
+    width: 112,
+    height: 10,
+    x: "7vw",
+    y: "34vh",
+    driftX: "-2vw",
+    driftY: "-5vh",
+    delayMs: 1160,
+    durationMs: 1440,
+  },
+  {
+    id: "signal-9",
+    kind: "dot",
+    tone: "neutral",
+    width: 16,
+    height: 16,
+    x: "42vw",
+    y: "18vh",
+    driftX: "-6vw",
+    driftY: "-3vh",
+    delayMs: 1340,
+    durationMs: 1260,
+  },
+  {
+    id: "signal-10",
+    kind: "bar",
+    tone: "neutral",
+    width: 84,
+    height: 9,
+    x: "-16vw",
+    y: "-5vh",
+    driftX: "5vw",
+    driftY: "2vh",
+    delayMs: 1520,
+    durationMs: 1360,
+  },
+  {
+    id: "signal-11",
+    kind: "dot",
+    tone: "warm",
+    width: 18,
+    height: 18,
+    x: "0vw",
+    y: "12vh",
+    driftX: "2vw",
+    driftY: "-5vh",
+    delayMs: 1780,
+    durationMs: 1220,
+  },
+  {
+    id: "signal-12",
+    kind: "bar",
+    tone: "accent",
+    width: 76,
+    height: 9,
+    x: "31vw",
+    y: "-31vh",
+    driftX: "-5vw",
+    driftY: "5vh",
+    delayMs: 2060,
+    durationMs: 1360,
+  },
+];
 
 const chatterMarks: ChatterMark[] = [
   {
     id: "left-warm",
     kind: "bar",
     tone: "warm",
-    width: 170,
-    height: 24,
+    width: 114,
+    height: 14,
     startX: "-43vw",
     startY: "-26vh",
-    midX: "-25vw",
-    midY: "-16vh",
-    finalX: "-19.4rem",
-    finalY: "-7.9rem",
+    midX: "-23vw",
+    midY: "-14vh",
+    finalX: "-9.2rem",
+    finalY: "-5.1rem",
     delayMs: 0,
     durationMs: 5600,
   },
@@ -47,14 +219,14 @@ const chatterMarks: ChatterMark[] = [
     id: "right-warm",
     kind: "bar",
     tone: "warm",
-    width: 260,
-    height: 24,
+    width: 174,
+    height: 15,
     startX: "41vw",
     startY: "-30vh",
-    midX: "24vw",
+    midX: "23vw",
     midY: "-18vh",
-    finalX: "11.2rem",
-    finalY: "-9.6rem",
+    finalX: "7.1rem",
+    finalY: "-5.9rem",
     delayMs: 120,
     durationMs: 5480,
   },
@@ -62,14 +234,14 @@ const chatterMarks: ChatterMark[] = [
     id: "lower-warm",
     kind: "bar",
     tone: "warm",
-    width: 188,
-    height: 22,
+    width: 128,
+    height: 14,
     startX: "-35vw",
     startY: "32vh",
-    midX: "-20vw",
+    midX: "-19vw",
     midY: "18vh",
-    finalX: "-17rem",
-    finalY: "11.8rem",
+    finalX: "-8.3rem",
+    finalY: "6.8rem",
     delayMs: 180,
     durationMs: 5380,
   },
@@ -77,14 +249,14 @@ const chatterMarks: ChatterMark[] = [
     id: "bottom-warm",
     kind: "bar",
     tone: "warm",
-    width: 220,
-    height: 22,
+    width: 146,
+    height: 14,
     startX: "34vw",
     startY: "34vh",
     midX: "18vw",
     midY: "19vh",
-    finalX: "8.4rem",
-    finalY: "8.9rem",
+    finalX: "5.2rem",
+    finalY: "4.6rem",
     delayMs: 80,
     durationMs: 5520,
   },
@@ -92,29 +264,44 @@ const chatterMarks: ChatterMark[] = [
     id: "top-neutral",
     kind: "bar",
     tone: "neutral",
-    width: 150,
-    height: 24,
+    width: 94,
+    height: 14,
     startX: "-18vw",
     startY: "-38vh",
-    midX: "-13vw",
-    midY: "-23vh",
-    finalX: "-6rem",
-    finalY: "-16.5rem",
+    midX: "-12vw",
+    midY: "-24vh",
+    finalX: "-5.2rem",
+    finalY: "-10.4rem",
     delayMs: 40,
     durationMs: 5560,
+  },
+  {
+    id: "top-right-neutral",
+    kind: "bar",
+    tone: "neutral",
+    width: 82,
+    height: 14,
+    startX: "26vw",
+    startY: "-41vh",
+    midX: "18vw",
+    midY: "-23vh",
+    finalX: "5.6rem",
+    finalY: "-10.4rem",
+    delayMs: 220,
+    durationMs: 5360,
   },
   {
     id: "right-neutral-small",
     kind: "bar",
     tone: "neutral",
-    width: 116,
-    height: 20,
+    width: 74,
+    height: 12,
     startX: "49vw",
     startY: "-2vh",
     midX: "28vw",
     midY: "-4vh",
-    finalX: "20.4rem",
-    finalY: "-1.2rem",
+    finalX: "10.7rem",
+    finalY: "-1.1rem",
     delayMs: 260,
     durationMs: 5220,
   },
@@ -122,29 +309,59 @@ const chatterMarks: ChatterMark[] = [
     id: "left-neutral-small",
     kind: "bar",
     tone: "neutral",
-    width: 116,
-    height: 20,
+    width: 78,
+    height: 12,
     startX: "-49vw",
     startY: "7vh",
     midX: "-27vw",
     midY: "3vh",
-    finalX: "-19rem",
-    finalY: "2.1rem",
+    finalX: "-10.8rem",
+    finalY: "-0.2rem",
     delayMs: 320,
     durationMs: 5160,
+  },
+  {
+    id: "left-low-neutral",
+    kind: "bar",
+    tone: "neutral",
+    width: 110,
+    height: 13,
+    startX: "-44vw",
+    startY: "22vh",
+    midX: "-26vw",
+    midY: "11vh",
+    finalX: "-8.6rem",
+    finalY: "3.8rem",
+    delayMs: 380,
+    durationMs: 5140,
+  },
+  {
+    id: "right-low-neutral",
+    kind: "bar",
+    tone: "neutral",
+    width: 82,
+    height: 13,
+    startX: "46vw",
+    startY: "25vh",
+    midX: "26vw",
+    midY: "13vh",
+    finalX: "10.2rem",
+    finalY: "3.2rem",
+    delayMs: 440,
+    durationMs: 5060,
   },
   {
     id: "bottom-neutral",
     kind: "bar",
     tone: "neutral",
-    width: 250,
-    height: 22,
+    width: 164,
+    height: 13,
     startX: "2vw",
     startY: "44vh",
     midX: "0vw",
     midY: "25vh",
-    finalX: "0.8rem",
-    finalY: "16.1rem",
+    finalX: "1.2rem",
+    finalY: "9.1rem",
     delayMs: 160,
     durationMs: 5400,
   },
@@ -152,14 +369,14 @@ const chatterMarks: ChatterMark[] = [
     id: "top-left-dot",
     kind: "dot",
     tone: "neutral",
-    width: 42,
-    height: 42,
+    width: 24,
+    height: 24,
     startX: "-30vw",
     startY: "-42vh",
     midX: "-21vw",
     midY: "-25vh",
-    finalX: "-18rem",
-    finalY: "-16.2rem",
+    finalX: "-10.4rem",
+    finalY: "-10.2rem",
     delayMs: 140,
     durationMs: 5460,
   },
@@ -167,14 +384,14 @@ const chatterMarks: ChatterMark[] = [
     id: "top-dot",
     kind: "dot",
     tone: "neutral",
-    width: 46,
-    height: 46,
+    width: 28,
+    height: 28,
     startX: "11vw",
     startY: "-45vh",
     midX: "8vw",
     midY: "-27vh",
-    finalX: "0.6rem",
-    finalY: "-17rem",
+    finalX: "1.9rem",
+    finalY: "-10.4rem",
     delayMs: 220,
     durationMs: 5280,
   },
@@ -182,14 +399,14 @@ const chatterMarks: ChatterMark[] = [
     id: "middle-dot",
     kind: "dot",
     tone: "warm",
-    width: 36,
-    height: 36,
+    width: 22,
+    height: 22,
     startX: "-8vw",
     startY: "-18vh",
     midX: "-7vw",
     midY: "-11vh",
-    finalX: "-10.3rem",
-    finalY: "-7.7rem",
+    finalX: "-3.9rem",
+    finalY: "-5.1rem",
     delayMs: 60,
     durationMs: 5580,
   },
@@ -197,14 +414,14 @@ const chatterMarks: ChatterMark[] = [
     id: "lower-dot",
     kind: "dot",
     tone: "neutral",
-    width: 36,
-    height: 36,
+    width: 22,
+    height: 22,
     startX: "-14vw",
     startY: "27vh",
     midX: "-9vw",
     midY: "17vh",
-    finalX: "-12rem",
-    finalY: "6.5rem",
+    finalX: "-4.6rem",
+    finalY: "6.6rem",
     delayMs: 300,
     durationMs: 5160,
   },
@@ -212,14 +429,14 @@ const chatterMarks: ChatterMark[] = [
     id: "right-dot",
     kind: "dot",
     tone: "warm",
-    width: 34,
-    height: 34,
+    width: 22,
+    height: 22,
     startX: "43vw",
     startY: "17vh",
     midX: "27vw",
     midY: "12vh",
-    finalX: "20rem",
-    finalY: "5.1rem",
+    finalX: "10.3rem",
+    finalY: "6.6rem",
     delayMs: 100,
     durationMs: 5500,
   },
@@ -242,25 +459,41 @@ export function LaunchIntro({ onComplete }: LaunchIntroProps) {
     <section className="launch-intro" aria-label="Stay opening animation" style={durationStyle(durationMs)}>
       <div className="launch-intro__grain" aria-hidden="true" />
       <div className="launch-intro__room" aria-hidden="true" />
-      <div className="launch-intro__chatter" aria-hidden="true">
-        {chatterMarks.map((mark) => (
+      <div className="launch-intro__signals" aria-hidden="true">
+        {signalMarks.map((mark) => (
           <span
             key={mark.id}
             className={[
-              "launch-intro__mark",
-              `launch-intro__mark-${mark.kind}`,
-              `launch-intro__mark-${mark.tone}`,
+              "launch-intro__signal",
+              `launch-intro__signal-${mark.kind}`,
+              `launch-intro__signal-${mark.tone}`,
             ].join(" ")}
-            style={markStyle(mark)}
+            style={signalStyle(mark)}
           />
         ))}
       </div>
-      <div className="launch-intro__connector" aria-hidden="true">
-        <span className="launch-intro__connector-line" />
-        <span className="launch-intro__connector-dot launch-intro__connector-dot-left" />
-        <span className="launch-intro__connector-dot launch-intro__connector-dot-right" />
+      <div className="launch-intro__icon-stage" aria-hidden="true">
+        <div className="launch-intro__tile" />
+        <div className="launch-intro__chatter">
+          {chatterMarks.map((mark) => (
+            <span
+              key={mark.id}
+              className={[
+                "launch-intro__beep",
+                "launch-intro__mark",
+                `launch-intro__mark-${mark.kind}`,
+                `launch-intro__mark-${mark.tone}`,
+              ].join(" ")}
+              style={markStyle(mark)}
+            />
+          ))}
+        </div>
+        <div className="launch-intro__connector">
+          <span className="launch-intro__connector-line" />
+          <span className="launch-intro__connector-dot launch-intro__connector-dot-left" />
+          <span className="launch-intro__connector-dot launch-intro__connector-dot-right" />
+        </div>
       </div>
-      <img className="launch-intro__icon" src={stayIconUrl} alt="" aria-hidden="true" />
       <div className="launch-intro__copy" aria-hidden="true">
         <p>Stay</p>
         <span>Their hour deserves your hour.</span>
@@ -290,6 +523,19 @@ function markStyle(mark: ChatterMark): LaunchStyle {
     "--mark-final-y": mark.finalY,
     "--mark-delay": `${mark.delayMs}ms`,
     "--mark-duration": `${mark.durationMs}ms`,
+  };
+}
+
+function signalStyle(mark: SignalMark): LaunchStyle {
+  return {
+    "--signal-width": `${mark.width}px`,
+    "--signal-height": `${mark.height}px`,
+    "--signal-x": mark.x,
+    "--signal-y": mark.y,
+    "--signal-drift-x": mark.driftX,
+    "--signal-drift-y": mark.driftY,
+    "--signal-delay": `${mark.delayMs}ms`,
+    "--signal-duration": `${mark.durationMs}ms`,
   };
 }
 
