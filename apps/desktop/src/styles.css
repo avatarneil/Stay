@@ -1079,6 +1079,7 @@ label {
 .launch-intro__connector-dot {
   position: absolute;
   top: 50%;
+  transform: translateY(-50%);
   background:
     linear-gradient(180deg, rgba(44, 132, 123, 0.98), rgba(10, 84, 77, 0.96)),
     var(--accent-deep);
@@ -1092,14 +1093,12 @@ label {
   left: 22%;
   right: 22%;
   height: 18%;
-  margin-top: -4%;
   border-radius: 999px;
 }
 
 .launch-intro__connector-dot {
   width: 39%;
   aspect-ratio: 1;
-  margin-top: -19.5%;
   border-radius: 999px;
 }
 
@@ -1606,11 +1605,14 @@ label {
 
 @keyframes launch-signals-out {
   0%,
-  64% {
+  52% {
     opacity: 1;
   }
 
-  84%,
+  76% {
+    opacity: 0.22;
+  }
+
   100% {
     opacity: 0;
   }
@@ -1619,27 +1621,27 @@ label {
 @keyframes launch-signal-pulse {
   0% {
     opacity: 0;
-    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.45);
-    filter: blur(6px);
+    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.56);
+    filter: blur(7px);
   }
 
-  18% {
+  12% {
     opacity: 1;
     transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(1.08);
     filter: blur(0);
   }
 
-  38% {
-    opacity: 0.24;
-    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.68);
-    filter: blur(4px);
+  36% {
+    opacity: 0.78;
+    transform: translate3d(var(--signal-x), var(--signal-y), 0) scale(0.96);
+    filter: blur(0.5px);
   }
 
-  58% {
-    opacity: 0.96;
+  64% {
+    opacity: 0.2;
     transform: translate3d(calc(var(--signal-x) + var(--signal-drift-x)), calc(var(--signal-y) + var(--signal-drift-y)), 0)
-      scale(0.92);
-    filter: blur(0);
+      scale(0.82);
+    filter: blur(4px);
   }
 
   100% {
