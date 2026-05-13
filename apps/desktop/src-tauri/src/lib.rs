@@ -73,8 +73,14 @@ fn current_state(state: State<'_, AppState>) -> Result<GuardView, String> {
 }
 
 #[tauri::command]
-fn set_pin(pin: String, state: State<'_, AppState>) -> Result<CommandResponse, String> {
-    set_pin_inner(&state, &pin)
+fn set_pin(
+    pin: String,
+    state: State<'_, AppState>,
+    window: WebviewWindow,
+) -> Result<CommandResponse, String> {
+    let response = set_pin_inner(&state, &pin)?;
+    apply_window_response(&window, &response).map_err(|error| error.to_string())?;
+    Ok(response)
 }
 
 #[tauri::command]
@@ -83,7 +89,7 @@ fn accept_stay(
     window: WebviewWindow,
 ) -> Result<CommandResponse, String> {
     let response = accept_stay_inner(&state)?;
-    apply_window_commands(&window, &response.commands).map_err(|error| error.to_string())?;
+    apply_window_response(&window, &response).map_err(|error| error.to_string())?;
     Ok(response)
 }
 
@@ -93,7 +99,7 @@ fn dismiss_candidate(
     window: WebviewWindow,
 ) -> Result<CommandResponse, String> {
     let response = dismiss_candidate_inner(&state)?;
-    apply_window_commands(&window, &response.commands).map_err(|error| error.to_string())?;
+    apply_window_response(&window, &response).map_err(|error| error.to_string())?;
     Ok(response)
 }
 
@@ -103,7 +109,7 @@ fn stop_guarding(
     window: WebviewWindow,
 ) -> Result<CommandResponse, String> {
     let response = stop_guarding_inner(&state)?;
-    apply_window_commands(&window, &response.commands).map_err(|error| error.to_string())?;
+    apply_window_response(&window, &response).map_err(|error| error.to_string())?;
     Ok(response)
 }
 
@@ -114,7 +120,7 @@ fn submit_pin(
     window: WebviewWindow,
 ) -> Result<CommandResponse, String> {
     let response = submit_pin_inner(&state, &pin)?;
-    apply_window_commands(&window, &response.commands).map_err(|error| error.to_string())?;
+    apply_window_response(&window, &response).map_err(|error| error.to_string())?;
     Ok(response)
 }
 
@@ -242,7 +248,12 @@ pub fn run() {
         .manage(AppState::default())
         .setup(|app| {
             if let Some(window) = app.get_webview_window("main") {
-                let _ = position_top_right(&window);
+                let state = app.state::<AppState>();
+                if current_state_inner(&state).is_ok_and(|view| should_hide_main_window(&view)) {
+                    let _ = window.hide();
+                } else {
+                    let _ = position_top_right(&window);
+                }
             }
             spawn_focus_loop(app.handle().clone());
             Ok(())
@@ -271,7 +282,7 @@ fn spawn_focus_loop(app: tauri::AppHandle) {
                 && !response.commands.is_empty()
             {
                 if let Some(window) = app.get_webview_window("main") {
-                    let _ = apply_window_commands(&window, &response.commands);
+                    let _ = apply_window_response(&window, &response);
                 }
                 let _ = app.emit("stay-state-changed", response);
             }
@@ -395,7 +406,15 @@ fn position_monitor_overlay(window: &WebviewWindow) -> tauri::Result<()> {
     Ok(())
 }
 
-fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> tauri::Result<()> {
+fn apply_window_response(window: &WebviewWindow, response: &CommandResponse) -> tauri::Result<()> {
+    apply_window_commands(window, &response.commands, &response.view)
+}
+
+fn apply_window_commands(
+    window: &WebviewWindow,
+    commands: &[GuardCommand],
+    view: &GuardView,
+) -> tauri::Result<()> {
     if let Some(focused) = commands.iter().find_map(|command| {
         if let GuardCommand::ShowLock { focused, .. } = command {
             Some(focused)
@@ -418,17 +437,45 @@ fn apply_window_commands(window: &WebviewWindow, commands: &[GuardCommand]) -> t
         return Ok(());
     }
 
+    if commands
+        .iter()
+        .any(|command| matches!(command, GuardCommand::ShowPrompt { .. }))
+    {
+        hide_guard_border(window.app_handle())?;
+        position_top_right(window)?;
+        return Ok(());
+    }
+
     if commands.iter().any(|command| {
         matches!(
             command,
-            GuardCommand::ShowPrompt { .. } | GuardCommand::HidePrompt | GuardCommand::StopGuarding
+            GuardCommand::HidePrompt | GuardCommand::StopGuarding
         )
     }) {
         hide_guard_border(window.app_handle())?;
-        position_top_right(window)?;
+        if should_hide_main_window(view) {
+            window.hide()?;
+        } else {
+            position_top_right(window)?;
+        }
+        return Ok(());
+    }
+
+    if should_hide_main_window(view) {
+        hide_guard_border(window.app_handle())?;
+        window.hide()?;
     }
 
     Ok(())
+}
+
+fn should_hide_main_window(view: &GuardView) -> bool {
+    matches!(
+        view,
+        GuardView::Idle {
+            pin_configured: true
+        }
+    )
 }
 
 fn show_guard_border(app: &AppHandle, anchor: &WebviewWindow) -> tauri::Result<()> {
@@ -694,5 +741,21 @@ mod tests {
                 },
             }
         );
+    }
+
+    #[test]
+    fn hides_main_window_only_when_ready_and_idle() {
+        assert!(should_hide_main_window(&GuardView::Idle {
+            pin_configured: true
+        }));
+        assert!(!should_hide_main_window(&GuardView::Idle {
+            pin_configured: false
+        }));
+        assert!(!should_hide_main_window(&GuardView::MeetingCandidate {
+            candidate: MeetingClassifier::default()
+                .classify(&WindowSnapshot::new("zoom.us", "Zoom Meeting"))
+                .unwrap(),
+            pin_configured: true,
+        }));
     }
 }
