@@ -90,11 +90,10 @@ mod macos_accessibility {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, target_os = "macos"))]
 mod tests {
     use super::*;
 
-    #[cfg(target_os = "macos")]
     #[test]
     fn enriches_empty_macos_title_from_accessibility() {
         let snapshot = WindowSnapshot::new("zoom.us", "").with_process_id(1006);
@@ -108,7 +107,6 @@ mod tests {
         assert_eq!(snapshot.title, "Zoom Meeting");
     }
 
-    #[cfg(target_os = "macos")]
     #[test]
     fn keeps_existing_macos_title_without_accessibility_lookup() {
         let snapshot = WindowSnapshot::new("zoom.us", "Home").with_process_id(1006);
