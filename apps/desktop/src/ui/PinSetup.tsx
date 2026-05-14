@@ -1,5 +1,6 @@
 import { FormEvent, useState } from "react";
-import { cleanPinInput } from "./pinInput";
+import { PinCodeInput } from "./PinCodeInput";
+import { isCompletePin } from "./pinInput";
 
 type PinSetupProps = {
   error: string | null;
@@ -11,6 +12,10 @@ export function PinSetup({ error, onSave }: PinSetupProps) {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!isCompletePin(pin)) {
+      return;
+    }
+
     const saved = await onSave(pin);
     if (saved) {
       setPin("");
@@ -19,20 +24,18 @@ export function PinSetup({ error, onSave }: PinSetupProps) {
 
   return (
     <form className="pin-setup mode-panel" noValidate onSubmit={handleSubmit}>
-      <label htmlFor="setup-pin">Set a four digit PIN</label>
-      <div className="control-row">
-        <input
+      <div className="control-row pin-entry-row">
+        <PinCodeInput
           id="setup-pin"
-          inputMode="numeric"
-          maxLength={4}
-          pattern="[0-9]{4}"
-          autoComplete="off"
+          label="Set a four digit PIN"
           value={pin}
-          aria-invalid={Boolean(error)}
-          aria-describedby={error ? "setup-error" : undefined}
-          onChange={(event) => setPin(cleanPinInput(event.currentTarget.value))}
+          error={error}
+          errorId="setup-error"
+          onChange={setPin}
         />
-        <button type="submit">Keep</button>
+        <button type="submit" disabled={!isCompletePin(pin)}>
+          Keep
+        </button>
       </div>
       <p id="setup-error" className="error-line" role="status">
         {error}

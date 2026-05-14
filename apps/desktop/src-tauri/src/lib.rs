@@ -152,6 +152,17 @@ fn set_guarding_panel_expanded(
 }
 
 #[tauri::command]
+fn set_launch_animation_active(active: bool, window: WebviewWindow) -> Result<(), String> {
+    let result = if active {
+        position_launch_animation(&window)
+    } else {
+        position_top_right(&window)
+    };
+
+    result.map_err(|error| error.to_string())
+}
+
+#[tauri::command]
 fn observe_focus_for_test(
     app_name: String,
     title: String,
@@ -266,6 +277,7 @@ pub fn run() {
             stop_guarding,
             submit_pin,
             set_guarding_panel_expanded,
+            set_launch_animation_active,
             observe_focus_for_test
         ])
         .run(tauri::generate_context!())
@@ -311,6 +323,18 @@ fn position_guarding_handle(window: &WebviewWindow) -> tauri::Result<()> {
     window.set_size(tauri::Size::Physical(geometry.size))?;
     window.set_position(tauri::Position::Physical(geometry.position))?;
     show_main_window(window, false)
+}
+
+fn position_launch_animation(window: &WebviewWindow) -> tauri::Result<()> {
+    let Some(monitor) = window.current_monitor()? else {
+        return Ok(());
+    };
+
+    window.set_position(tauri::Position::Physical(*monitor.position()))?;
+    window.set_size(tauri::Size::Physical(*monitor.size()))?;
+    window.show()?;
+    window.set_focus()?;
+    Ok(())
 }
 
 fn compact_window_geometry(

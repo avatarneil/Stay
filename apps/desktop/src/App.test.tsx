@@ -1,22 +1,32 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { createMockStayClient } from "./mockStayClient";
+
+function renderApp(client = createMockStayClient()) {
+  return render(<App client={client} showLaunchIntro={false} />);
+}
 
 describe("Stay GUI", () => {
   it("shows PIN setup in idle mode and constrains PIN input", async () => {
     const user = userEvent.setup();
     const client = createMockStayClient();
 
-    render(<App client={client} />);
+    renderApp(client);
 
     const pinInput = await screen.findByLabelText("Set a four digit PIN");
+    const keepButton = screen.getByRole("button", { name: "Keep" });
+
+    expect(keepButton).toBeDisabled();
+    expect(pinInput.closest(".pin-code-input")?.querySelectorAll(".pin-code-slot")).toHaveLength(4);
+
     await user.type(pinInput, "12a345");
 
     expect(pinInput).toHaveValue("1234");
+    expect(keepButton).toBeEnabled();
 
-    await user.click(screen.getByRole("button", { name: "Keep" }));
+    await user.click(keepButton);
 
     expect(client.view()).toMatchObject({ mode: "idle", pin_configured: true });
     expect(screen.getByText("Stay is waiting.")).toBeInTheDocument();
@@ -28,7 +38,7 @@ describe("Stay GUI", () => {
     await client.setPin("4821");
     client.focusMeeting();
 
-    render(<App client={client} />);
+    renderApp(client);
 
     expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
     expect(screen.getByText("Weekly Team Sync")).toBeInTheDocument();
@@ -45,7 +55,7 @@ describe("Stay GUI", () => {
     await client.setPin("4821");
     client.focusMeeting();
 
-    render(<App client={client} />);
+    renderApp(client);
 
     await user.click(await screen.findByRole("button", { name: "Stay" }));
 
@@ -67,11 +77,17 @@ describe("Stay GUI", () => {
     await client.acceptStay();
     client.focusAway();
 
-    render(<App client={client} />);
+    renderApp(client);
 
     const unlockInput = await screen.findByLabelText("Unlock PIN");
+    const openButton = screen.getByRole("button", { name: "Open" });
+
+    expect(openButton).toBeDisabled();
+    expect(unlockInput.closest(".pin-code-input")?.querySelectorAll(".pin-code-slot")).toHaveLength(4);
+
     await user.type(unlockInput, "48x21");
     expect(unlockInput).toHaveValue("4821");
+    expect(openButton).toBeEnabled();
 
     await user.keyboard("{Enter}");
 
@@ -83,7 +99,7 @@ describe("Stay GUI", () => {
     const client = createMockStayClient();
     await client.setPin("4821");
 
-    render(<App client={client} />);
+    renderApp(client);
 
     expect(await screen.findByText("Stay is waiting.")).toBeInTheDocument();
 
@@ -94,20 +110,51 @@ describe("Stay GUI", () => {
     expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
   });
 
-  it("renders setup command errors inline without changing mode", async () => {
+  it("shows only PIN setup before setup and waits for a complete PIN", async () => {
     const user = userEvent.setup();
     const client = createMockStayClient();
     client.focusMeeting();
 
-    render(<App client={client} />);
+    renderApp(client);
 
-    expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stay" })).toBeDisabled();
+    expect(await screen.findByLabelText("Set a four digit PIN")).toBeInTheDocument();
+    expect(screen.getByText("PIN needed")).toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stay" })).not.toBeInTheDocument();
 
-    await user.type(screen.getByLabelText("Set a four digit PIN"), "12");
-    await user.click(screen.getByRole("button", { name: "Keep" }));
+    const pinInput = screen.getByLabelText("Set a four digit PIN");
+    const keepButton = screen.getByRole("button", { name: "Keep" });
 
-    expect(await screen.findByText("PIN must be exactly four digits")).toBeInTheDocument();
-    expect(screen.getByText("Stay with this meeting?")).toBeInTheDocument();
+    await user.type(pinInput, "12");
+    expect(keepButton).toBeDisabled();
+    await user.click(keepButton);
+
+    expect(client.commandLog).not.toContain("set_pin");
+    expect(screen.queryByText("PIN must be exactly four digits")).not.toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
+  });
+
+  it("shows the first-launch intro when enabled and dismisses it", async () => {
+    const user = userEvent.setup();
+
+    render(<App client={createMockStayClient()} showLaunchIntro={true} />);
+
+    expect(await screen.findByLabelText("Stay opening animation")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Skip" }));
+
+    expect(screen.queryByLabelText("Stay opening animation")).not.toBeInTheDocument();
+  });
+
+  it("can force the first-launch intro in dev with an env flag", async () => {
+    vi.stubEnv("VITE_STAY_FORCE_LAUNCH_INTRO", "1");
+
+    try {
+      render(<App client={createMockStayClient()} />);
+
+      expect(await screen.findByLabelText("Stay opening animation")).toBeInTheDocument();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
 });
