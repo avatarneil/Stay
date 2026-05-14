@@ -108,6 +108,10 @@ impl MeetingClassifier {
             return None;
         };
 
+        if is_known_non_meeting_shell(&meeting_app, &title) {
+            return None;
+        }
+
         Some(MeetingCandidate {
             app: meeting_app,
             window: window.clone(),
@@ -124,11 +128,8 @@ impl MeetingClassifier {
             return false;
         }
 
-        if candidate.window.window_id.is_some()
-            && window.window_id.is_some()
-            && candidate.window.window_id == window.window_id
-        {
-            return true;
+        if is_same_observed_window(&candidate.window, window) {
+            return matches!(self.classify(window), Some(current) if current.app == candidate.app);
         }
 
         let Some(current_candidate) = self.classify(window) else {
@@ -145,6 +146,46 @@ impl MeetingClassifier {
             && candidate.window.process_id == window.process_id;
 
         same_app && (same_title || same_process || !is_browser_app(&candidate.window.app_name))
+    }
+
+    pub(crate) fn has_meeting_ended(
+        &self,
+        candidate: &MeetingCandidate,
+        window: &WindowSnapshot,
+    ) -> bool {
+        if self.is_stay_window(window) {
+            return false;
+        }
+
+        let current_is_same_meeting_app =
+            matches!(self.classify(window), Some(current) if current.app == candidate.app);
+
+        if is_same_observed_window(&candidate.window, window) {
+            return !current_is_same_meeting_app;
+        }
+
+        if is_browser_app(&candidate.window.app_name) {
+            return false;
+        }
+
+        if candidate.window.app_name_normalized() != window.app_name_normalized() {
+            return false;
+        }
+
+        if has_distinct_window_ids(&candidate.window, window) {
+            return true;
+        }
+
+        !current_is_same_meeting_app
+    }
+
+    pub(crate) fn has_definitive_meeting_end(
+        &self,
+        candidate: &MeetingCandidate,
+        window: &WindowSnapshot,
+    ) -> bool {
+        self.has_meeting_ended(candidate, window)
+            && is_same_observed_window(&candidate.window, window)
     }
 }
 
@@ -167,4 +208,63 @@ fn is_browser_app(app_name: &str) -> bool {
     ]
     .iter()
     .any(|browser| app.contains(browser))
+}
+
+fn is_known_non_meeting_shell(app: &MeetingApp, title: &str) -> bool {
+    if title.is_empty() {
+        return true;
+    }
+
+    match app {
+        MeetingApp::Zoom => {
+            text_contains(title, &["zoom workplace"]) || title_matches(title, ZOOM_SHELL_TITLES)
+        }
+        MeetingApp::MicrosoftTeams => title_matches(title, TEAMS_SHELL_TITLES),
+        MeetingApp::Webex => title_matches(title, WEBEX_SHELL_TITLES),
+        MeetingApp::SlackHuddle => !text_contains(title, &["huddle"]),
+        MeetingApp::FaceTime => title_matches(title, FACETIME_SHELL_TITLES),
+        MeetingApp::GoogleMeet => false,
+    }
+}
+
+const ZOOM_SHELL_TITLES: &[&str] = &[
+    "home",
+    "team chat",
+    "meetings",
+    "calendar",
+    "mail",
+    "whiteboards",
+    "clips",
+    "contacts",
+    "settings",
+];
+
+const TEAMS_SHELL_TITLES: &[&str] = &[
+    "microsoft teams",
+    "teams",
+    "activity",
+    "chat",
+    "calendar",
+    "calls",
+    "files",
+    "apps",
+];
+
+const WEBEX_SHELL_TITLES: &[&str] = &["webex", "meetings", "messaging", "calling", "contacts"];
+
+const FACETIME_SHELL_TITLES: &[&str] = &["facetime"];
+
+fn title_matches(title: &str, needles: &[&str]) -> bool {
+    needles.contains(&title)
+}
+
+fn is_same_observed_window(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
+    left.window_id.is_some()
+        && right.window_id.is_some()
+        && left.window_id == right.window_id
+        && left.app_name_normalized() == right.app_name_normalized()
+}
+
+fn has_distinct_window_ids(left: &WindowSnapshot, right: &WindowSnapshot) -> bool {
+    left.window_id.is_some() && right.window_id.is_some() && left.window_id != right.window_id
 }

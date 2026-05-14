@@ -103,6 +103,7 @@ enum GuardPhase {
 struct GuardSession {
     meeting: MeetingCandidate,
     authorized_app_keys: HashSet<String>,
+    pending_end_key: Option<String>,
 }
 
 impl GuardSession {
@@ -110,6 +111,7 @@ impl GuardSession {
         Self {
             meeting,
             authorized_app_keys: HashSet::new(),
+            pending_end_key: None,
         }
     }
 
@@ -120,6 +122,17 @@ impl GuardSession {
     fn is_app_authorized(&self, window: &WindowSnapshot) -> bool {
         self.authorized_app_keys
             .contains(&window.app_identity_key())
+    }
+
+    fn clear_pending_end(&mut self) {
+        self.pending_end_key = None;
+    }
+
+    fn confirm_or_track_pending_end(&mut self, window: &WindowSnapshot) -> bool {
+        let key = window.identity_key();
+        let confirmed = self.pending_end_key.as_deref() == Some(key.as_str());
+        self.pending_end_key = Some(key);
+        confirmed
     }
 }
 
@@ -325,17 +338,24 @@ impl FocusGuard {
 
     fn observe_from_guarding(
         &mut self,
-        session: GuardSession,
+        mut session: GuardSession,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
+        if self.should_stop_for_meeting_end(&mut session, &window) {
+            self.phase = GuardPhase::Idle;
+            return vec![GuardCommand::StopGuarding];
+        }
+
         if self
             .classifier
             .is_same_meeting_window(&session.meeting, &window)
         {
+            self.phase = GuardPhase::Guarding(session);
             return Vec::new();
         }
 
         if session.is_app_authorized(&window) {
+            self.phase = GuardPhase::Guarding(session);
             return Vec::new();
         }
 
@@ -353,12 +373,17 @@ impl FocusGuard {
 
     fn observe_from_locked(
         &mut self,
-        session: GuardSession,
+        mut session: GuardSession,
         focused: WindowSnapshot,
         failed_attempts: u32,
         last_error: Option<String>,
         window: WindowSnapshot,
     ) -> Vec<GuardCommand> {
+        if self.should_stop_for_meeting_end(&mut session, &window) {
+            self.phase = GuardPhase::Idle;
+            return vec![GuardCommand::StopGuarding];
+        }
+
         if self
             .classifier
             .is_same_meeting_window(&session.meeting, &window)
@@ -393,5 +418,25 @@ impl FocusGuard {
             last_error,
         };
         vec![command]
+    }
+
+    fn should_stop_for_meeting_end(
+        &self,
+        session: &mut GuardSession,
+        window: &WindowSnapshot,
+    ) -> bool {
+        if !self.classifier.has_meeting_ended(&session.meeting, window) {
+            session.clear_pending_end();
+            return false;
+        }
+
+        if self
+            .classifier
+            .has_definitive_meeting_end(&session.meeting, window)
+        {
+            return true;
+        }
+
+        session.confirm_or_track_pending_end(window)
     }
 }
