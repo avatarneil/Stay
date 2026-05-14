@@ -114,6 +114,9 @@ export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppPro
 
   const setupError = actionError?.target === "setup" ? actionError.message : null;
   const modeError = actionError?.target === "mode" ? actionError.message : null;
+  const needsPinSetup = !isLoading && !view.pin_configured;
+  const canShowModePanels = !isLoading && view.pin_configured;
+  const shellMode = view.pin_configured ? view.mode : "idle";
   const completeLaunchIntro = useCallback(() => {
     markLaunchIntroSeen();
     setShowLaunchIntro(false);
@@ -121,7 +124,7 @@ export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppPro
 
   return (
     <>
-      <StatusShell mode={view.mode} status={status}>
+      <StatusShell mode={shellMode} status={status}>
         {isLoading ? (
           <section className="mode-panel quiet-state">
             <p className="kicker">Opening</p>
@@ -129,18 +132,18 @@ export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppPro
           </section>
         ) : null}
 
-        {!isLoading && !view.pin_configured ? (
+        {needsPinSetup ? (
           <PinSetup error={setupError} onSave={(pin) => runCommand(() => client.setPin(pin), "setup")} />
         ) : null}
 
-        {!isLoading && view.mode === "idle" && view.pin_configured ? (
+        {canShowModePanels && view.mode === "idle" ? (
           <section className="mode-panel quiet-state">
             <p className="kicker">Ready</p>
             <h2>Stay is waiting.</h2>
           </section>
         ) : null}
 
-        {!isLoading && view.mode === "meeting_candidate" ? (
+        {canShowModePanels && view.mode === "meeting_candidate" ? (
           <MeetingPrompt
             candidate={view.candidate}
             canAccept={view.pin_configured}
@@ -154,7 +157,7 @@ export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppPro
           />
         ) : null}
 
-        {!isLoading && view.mode === "guarding" ? (
+        {canShowModePanels && view.mode === "guarding" ? (
           <GuardingStatus
             meeting={view.meeting}
             error={modeError}
@@ -164,7 +167,7 @@ export function App({ client, showLaunchIntro: showLaunchIntroOverride }: AppPro
           />
         ) : null}
 
-        {!isLoading && view.mode === "locked" ? (
+        {canShowModePanels && view.mode === "locked" ? (
           <LockScreen view={view} error={modeError} onSubmit={(pin) => runCommand(() => client.submitPin(pin))} />
         ) : null}
       </StatusShell>

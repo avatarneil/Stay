@@ -110,15 +110,17 @@ describe("Stay GUI", () => {
     expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
   });
 
-  it("waits for a complete setup PIN instead of submitting invalid input", async () => {
+  it("shows only PIN setup before setup and waits for a complete PIN", async () => {
     const user = userEvent.setup();
     const client = createMockStayClient();
     client.focusMeeting();
 
     renderApp(client);
 
-    expect(await screen.findByText("Stay with this meeting?")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Stay" })).toBeDisabled();
+    expect(await screen.findByLabelText("Set a four digit PIN")).toBeInTheDocument();
+    expect(screen.getByText("PIN needed")).toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Stay" })).not.toBeInTheDocument();
 
     const pinInput = screen.getByLabelText("Set a four digit PIN");
     const keepButton = screen.getByRole("button", { name: "Keep" });
@@ -129,7 +131,7 @@ describe("Stay GUI", () => {
 
     expect(client.commandLog).not.toContain("set_pin");
     expect(screen.queryByText("PIN must be exactly four digits")).not.toBeInTheDocument();
-    expect(screen.getByText("Stay with this meeting?")).toBeInTheDocument();
+    expect(screen.queryByText("Stay with this meeting?")).not.toBeInTheDocument();
   });
 
   it("shows the first-launch intro when enabled and dismisses it", async () => {
