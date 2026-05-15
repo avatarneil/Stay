@@ -3,6 +3,8 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 import { useEffect, useRef, useState } from "react";
 import type { FocusEvent, ReactNode } from "react";
 
+const guardPanelCollapseDelayMs = 60;
+
 type StatusShellProps = {
   mode: string;
   children: ReactNode;
@@ -13,9 +15,11 @@ export function StatusShell({ mode, children, status }: StatusShellProps) {
   const isGuarding = mode === "guarding";
   const [isGuardPanelExpanded, setIsGuardPanelExpanded] = useState(false);
   const collapseTimer = useRef<number | undefined>(undefined);
+  const isGuardPanelExpandedRef = useRef(false);
 
   useEffect(() => {
     if (!isGuarding) {
+      isGuardPanelExpandedRef.current = false;
       setIsGuardPanelExpanded(false);
     }
 
@@ -35,10 +39,15 @@ export function StatusShell({ mode, children, status }: StatusShellProps) {
     collapseTimer.current = window.setTimeout(() => {
       collapseTimer.current = undefined;
       commitGuardPanelExpanded(false);
-    }, 180);
+    }, guardPanelCollapseDelayMs);
   }
 
   function commitGuardPanelExpanded(expanded: boolean): void {
+    if (isGuardPanelExpandedRef.current === expanded) {
+      return;
+    }
+
+    isGuardPanelExpandedRef.current = expanded;
     setIsGuardPanelExpanded(expanded);
 
     if (!isTauri()) {
