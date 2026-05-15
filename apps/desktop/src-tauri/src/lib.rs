@@ -8,12 +8,12 @@ use std::sync::Mutex;
 use std::thread;
 use std::time::Duration;
 use tauri::{
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WebviewUrl, WebviewWindow,
-    WebviewWindowBuilder,
+    AppHandle, Emitter, LogicalPosition, LogicalSize, Manager, PhysicalPosition, PhysicalSize,
+    State, WebviewUrl, WebviewWindow, WebviewWindowBuilder,
 };
 
 #[cfg(target_os = "macos")]
-use tauri::{LogicalPosition, LogicalSize};
+use tauri::{LogicalPosition as OverlayLogicalPosition, LogicalSize as OverlayLogicalSize};
 
 const COMPACT_WINDOW_MIN_WIDTH: u32 = 420;
 const COMPACT_WINDOW_MAX_WIDTH: u32 = 960;
@@ -42,8 +42,8 @@ enum OverlayGeometry {
     },
     #[cfg(target_os = "macos")]
     Logical {
-        position: LogicalPosition<f64>,
-        size: LogicalSize<f64>,
+        position: OverlayLogicalPosition<f64>,
+        size: OverlayLogicalSize<f64>,
     },
 }
 
@@ -51,6 +51,13 @@ enum OverlayGeometry {
 struct WindowGeometry {
     position: PhysicalPosition<i32>,
     size: PhysicalSize<u32>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+struct GuardBorderGeometry {
+    position: PhysicalPosition<i32>,
+    size: PhysicalSize<u32>,
+    scale_factor: f64,
 }
 
 impl Default for AppState {
@@ -518,12 +525,57 @@ fn should_hide_main_window(view: &GuardView) -> bool {
 }
 
 fn show_guard_border(app: &AppHandle, anchor: &WebviewWindow) -> tauri::Result<()> {
-    let border = match app.get_webview_window(GUARD_BORDER_LABEL) {
-        Some(border) => border,
+    let monitor_geometries: Vec<GuardBorderGeometry> = anchor
+        .available_monitors()?
+        .iter()
+        .map(|monitor| GuardBorderGeometry {
+            position: *monitor.position(),
+            size: *monitor.size(),
+            scale_factor: monitor.scale_factor(),
+        })
+        .collect();
+    let guard_borders = guard_border_windows_for_monitors(&monitor_geometries);
+
+    if guard_borders.is_empty() {
+        return hide_guard_border(app);
+    }
+
+    for (label, geometry) in &guard_borders {
+        let border = guard_border_window(app, label, geometry)?;
+        border.set_ignore_cursor_events(true)?;
+        border.set_position(tauri::Position::Logical(geometry.logical_position()))?;
+        border.set_size(tauri::Size::Logical(geometry.logical_size()))?;
+        border.show()?;
+    }
+
+    hide_stale_guard_borders(app, &guard_borders)?;
+    Ok(())
+}
+
+fn hide_guard_border(app: &AppHandle) -> tauri::Result<()> {
+    for (label, border) in app.webview_windows() {
+        if is_guard_border_label(&label) {
+            border.hide()?;
+        }
+    }
+
+    Ok(())
+}
+
+fn guard_border_window(
+    app: &AppHandle,
+    label: &str,
+    geometry: &GuardBorderGeometry,
+) -> tauri::Result<WebviewWindow> {
+    let logical_position = geometry.logical_position();
+    let logical_size = geometry.logical_size();
+
+    match app.get_webview_window(label) {
+        Some(border) => Ok(border),
         None => WebviewWindowBuilder::new(
             app,
-            GUARD_BORDER_LABEL,
-            WebviewUrl::App("index.html".into()),
+            label,
+            WebviewUrl::App("index.html?surface=guard-border".into()),
         )
         .title("Stay Guard Border")
         .decorations(false)
@@ -533,29 +585,74 @@ fn show_guard_border(app: &AppHandle, anchor: &WebviewWindow) -> tauri::Result<(
         .transparent(true)
         .shadow(false)
         .resizable(false)
+        .position(logical_position.x, logical_position.y)
+        .inner_size(logical_size.width, logical_size.height)
         .focusable(false)
         .focused(false)
         .visible(false)
-        .build()?,
-    };
-
-    let Some(monitor) = anchor.current_monitor()? else {
-        return Ok(());
-    };
-
-    border.set_ignore_cursor_events(true)?;
-    border.set_position(tauri::Position::Physical(*monitor.position()))?;
-    border.set_size(tauri::Size::Physical(*monitor.size()))?;
-    border.show()?;
-    Ok(())
+        .build(),
+    }
 }
 
-fn hide_guard_border(app: &AppHandle) -> tauri::Result<()> {
-    if let Some(border) = app.get_webview_window(GUARD_BORDER_LABEL) {
-        border.hide()?;
+fn hide_stale_guard_borders(
+    app: &AppHandle,
+    active_borders: &[(String, GuardBorderGeometry)],
+) -> tauri::Result<()> {
+    for (label, border) in app.webview_windows() {
+        let is_active = active_borders
+            .iter()
+            .any(|(active_label, _)| active_label == &label);
+
+        if is_guard_border_label(&label) && !is_active {
+            border.hide()?;
+        }
     }
 
     Ok(())
+}
+
+fn guard_border_windows_for_monitors(
+    monitors: &[GuardBorderGeometry],
+) -> Vec<(String, GuardBorderGeometry)> {
+    monitors
+        .iter()
+        .cloned()
+        .enumerate()
+        .map(|(index, geometry)| (guard_border_label(index), geometry))
+        .collect()
+}
+
+fn guard_border_label(index: usize) -> String {
+    if index == 0 {
+        GUARD_BORDER_LABEL.to_string()
+    } else {
+        format!("{GUARD_BORDER_LABEL}-{index}")
+    }
+}
+
+fn is_guard_border_label(label: &str) -> bool {
+    if label == GUARD_BORDER_LABEL {
+        return true;
+    }
+
+    let Some(index) = label
+        .strip_prefix(GUARD_BORDER_LABEL)
+        .and_then(|suffix| suffix.strip_prefix('-'))
+    else {
+        return false;
+    };
+
+    !index.is_empty() && index.chars().all(|character| character.is_ascii_digit())
+}
+
+impl GuardBorderGeometry {
+    fn logical_position(&self) -> LogicalPosition<f64> {
+        self.position.to_logical(self.scale_factor)
+    }
+
+    fn logical_size(&self) -> LogicalSize<f64> {
+        self.size.to_logical(self.scale_factor)
+    }
 }
 
 fn position_focused_window_overlay(
@@ -597,11 +694,11 @@ fn overlay_geometry_from_bounds(bounds: &WindowBounds) -> OverlayGeometry {
         // active-win-pos-rs reads kCGWindowBounds on macOS, which are screen points.
         // Passing them as physical pixels lets Tao divide by the Stay window scale factor.
         OverlayGeometry::Logical {
-            position: LogicalPosition {
+            position: OverlayLogicalPosition {
                 x: f64::from(bounds.x),
                 y: f64::from(bounds.y),
             },
-            size: LogicalSize {
+            size: OverlayLogicalSize {
                 width: f64::from(bounds.width),
                 height: f64::from(bounds.height),
             },
@@ -648,11 +745,11 @@ mod tests {
         assert_eq!(
             focused_overlay_geometry(&focused),
             Some(OverlayGeometry::Logical {
-                position: LogicalPosition {
+                position: OverlayLogicalPosition {
                     x: 3360.0,
                     y: -323.0
                 },
-                size: LogicalSize {
+                size: OverlayLogicalSize {
                     width: 1440.0,
                     height: 1265.0
                 },
@@ -779,6 +876,103 @@ mod tests {
                 },
             }
         );
+    }
+
+    #[test]
+    fn guard_border_windows_cover_every_display() {
+        let monitors = vec![
+            GuardBorderGeometry {
+                position: PhysicalPosition { x: 0, y: 0 },
+                size: PhysicalSize {
+                    width: 1920,
+                    height: 1080,
+                },
+                scale_factor: 2.0,
+            },
+            GuardBorderGeometry {
+                position: PhysicalPosition { x: 1920, y: -180 },
+                size: PhysicalSize {
+                    width: 1440,
+                    height: 900,
+                },
+                scale_factor: 1.0,
+            },
+            GuardBorderGeometry {
+                position: PhysicalPosition { x: -1280, y: 120 },
+                size: PhysicalSize {
+                    width: 1280,
+                    height: 720,
+                },
+                scale_factor: 1.0,
+            },
+        ];
+
+        assert_eq!(
+            guard_border_windows_for_monitors(&monitors),
+            vec![
+                ("guard-border".to_string(), monitors[0].clone()),
+                ("guard-border-1".to_string(), monitors[1].clone()),
+                ("guard-border-2".to_string(), monitors[2].clone()),
+            ]
+        );
+    }
+
+    #[test]
+    fn guard_border_geometry_uses_each_display_scale_for_logical_placement() {
+        let primary = GuardBorderGeometry {
+            position: PhysicalPosition { x: 0, y: 0 },
+            size: PhysicalSize {
+                width: 3840,
+                height: 2160,
+            },
+            scale_factor: 2.0,
+        };
+        let secondary = GuardBorderGeometry {
+            position: PhysicalPosition { x: 3840, y: -360 },
+            size: PhysicalSize {
+                width: 1920,
+                height: 1080,
+            },
+            scale_factor: 1.0,
+        };
+
+        assert_eq!(
+            primary.logical_position(),
+            LogicalPosition { x: 0.0, y: 0.0 }
+        );
+        assert_eq!(
+            primary.logical_size(),
+            LogicalSize {
+                width: 1920.0,
+                height: 1080.0,
+            }
+        );
+        assert_eq!(
+            secondary.logical_position(),
+            LogicalPosition {
+                x: 3840.0,
+                y: -360.0,
+            }
+        );
+        assert_eq!(
+            secondary.logical_size(),
+            LogicalSize {
+                width: 1920.0,
+                height: 1080.0,
+            }
+        );
+    }
+
+    #[test]
+    fn guard_border_label_detection_matches_only_guard_border_windows() {
+        assert!(is_guard_border_label("guard-border"));
+        assert!(is_guard_border_label("guard-border-1"));
+        assert!(is_guard_border_label("guard-border-42"));
+
+        assert!(!is_guard_border_label("guard-border-"));
+        assert!(!is_guard_border_label("guard-border-left"));
+        assert!(!is_guard_border_label("guard-border-preview-1"));
+        assert!(!is_guard_border_label("main"));
     }
 
     #[test]
